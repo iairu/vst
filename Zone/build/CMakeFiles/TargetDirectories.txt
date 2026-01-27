@@ -1,0 +1,5 @@
+/Users/iairu/Desktop/VST/Zone/build/CMakeFiles/zone.dir
+/Users/iairu/Desktop/VST/Zone/build/CMakeFiles/edit_cache.dir
+/Users/iairu/Desktop/VST/Zone/build/CMakeFiles/rebuild_cache.dir
+/Users/iairu/Desktop/VST/Zone/build/vst3/sdk/CMakeFiles/edit_cache.dir
+/Users/iairu/Desktop/VST/Zone/build/vst3/sdk/CMakeFiles/rebuild_cache.dir
