@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vstgui-ui-description version="1">
+	<fonts>
+		<font bold="false" font-name="Arial" name="title_font" size="24"/>
+		<font bold="false" font-name="Arial" name="label_font" size="11"/>
+		<font bold="false" font-name="Arial" name="value_font" size="10"/>
+	</fonts>
+	<colors>
+		<color name="bg_dark" rgba="#1a1a2eff"/>
+		<color name="bg_panel" rgba="#252538ff"/>
+		<color name="accent_purple" rgba="#8b5cf6ff"/>
+		<color name="accent_pink" rgba="#ec4899ff"/>
+		<color name="text_main" rgba="#f8fafdff"/>
+		<color name="text_dim" rgba="#94a3b8ff"/>
+		<color name="knob_bg" rgba="#334155ff"/>
+		<color name="knob_track" rgba="#475569ff"/>
+	</colors>
+	<gradients>
+		<gradient name="knob_gradient">
+			<color-stop rgba="#8b5cf6ff" start="0"/>
+			<color-stop rgba="#ec4899ff" start="1"/>
+		</gradient>
+	</gradients>
+	<control-tags>
+		<control-tag name="Shimmer" tag="0"/>
+		<control-tag name="ChorusDepth" tag="1"/>
+		<control-tag name="ChorusRate" tag="2"/>
+		<control-tag name="Saturation" tag="3"/>
+		<control-tag name="ReverbMix" tag="4"/>
+		<control-tag name="ReverbDecay" tag="5"/>
+		<control-tag name="StereoWidth" tag="6"/>
+		<control-tag name="MasterMix" tag="7"/>
+	</control-tags>
+	<template 
+		background-color="bg_dark" 
+		class="CViewContainer" 
+		mouse-enabled="true" 
+		name="view" 
+		opacity="1" 
+		origin="0, 0" 
+		size="600, 380" 
+		transparent="false">
+		
+		<!-- Title -->
+		<view 
+			class="CTextLabel" 
+			origin="0, 15" 
+			size="600, 40" 
+			font="title_font" 
+			font-color="text_main" 
+			text-alignment="center" 
+			title="Z O N E"
+			transparent="true"/>
+		
+		<!-- Subtitle -->
+		<view 
+			class="CTextLabel" 
+			origin="0, 50" 
+			size="600, 20" 
+			font="value_font" 
+			font-color="text_dim" 
+			text-alignment="center" 
+			title="ZUN-Style Audio Processor"
+			transparent="true"/>
+		
+		<!-- Top Row Panel -->
+		<view 
+			class="CViewContainer" 
+			origin="20, 85" 
+			size="560, 120" 
+			background-color="bg_panel"
+			round-rect-radius="8">
+			
+			<!-- Shimmer Knob -->
+			<view 
+				class="CAnimKnob" 
+				control-tag="Shimmer" 
+				origin="25, 15" 
+				size="60, 60"
+				default-value="0.3"
+				min-value="0"
+				max-value="1"
+				height-of-one-image="60"
+				sub-pixmaps="128"
+				zoom-factor="1.5"/>
+			<view 
+				class="CTextLabel" 
+				origin="10, 78" 
+				size="90, 18" 
+				font="label_font" 
+				font-color="text_main" 
+				text-alignment="center" 
+				title="Shimmer"
+				transparent="true"/>
+			<view 
+				class="CParamDisplay" 
+				control-tag="Shimmer" 
+				origin="10, 95" 
+				size="90, 16" 
+				font="value_font" 
+				font-color="accent_purple" 
+				text-alignment="center"
+				transparent="true"
+				value-precision="0"
+				style-percent=""/>
+			
+			<!-- Chorus Depth Knob -->
+			<view 
+				class="CAnimKnob" 
+				control-tag="ChorusDepth" 
+				origin="155, 15" 
+				size="60, 60"
+				default-value="0.5"
+				min-value="0"
+				max-value="1"
+				height-of-one-image="60"
+				sub-pixmaps="128"
+				zoom-factor="1.5"/>
+			<view 
+				class="CTextLabel" 
+				origin="140, 78" 
+				size="90, 18" 
+				font="label_font" 
+				font-color="text_main" 
+				text-alignment="center" 
+				title="Chorus Depth"
+				transparent="true"/>
+			<view 
+				class="CParamDisplay" 
+				control-tag="ChorusDepth" 
+				origin="140, 95" 
+				size="90, 16" 
+				font="value_font" 
+				font-color="accent_purple" 
+				text-alignment="center"
+				transparent="true"
+				value-precision="0"/>
+			
+			<!-- Chorus Rate Knob -->
+			<view 
+				class="CAnimKnob" 
+				control-tag="ChorusRate" 
+				origin="285, 15" 
+				size="60, 60"
+				default-value="0.5"
+				min-value="0"
+				max-value="1"
+				height-of-one-image="60"
+				sub-pixmaps="128"
+				zoom-factor="1.5"/>
+			<view 
+				class="CTextLabel" 
+				origin="270, 78" 
+				size="90, 18" 
+				font="label_font" 
+				font-color="text_main" 
+				text-alignment="center" 
+				title="Chorus Rate"
+				transparent="true"/>
+			<view 
+				class="CParamDisplay" 
+				control-tag="ChorusRate" 
+				origin="270, 95" 
+				size="90, 16" 
+				font="value_font" 
+				font-color="accent_purple" 
+				text-alignment="center"
+				transparent="true"
+				value-precision="0"/>
+			
+			<!-- Saturation Knob -->
+			<view 
+				class="CAnimKnob" 
+				control-tag="Saturation" 
+				origin="415, 15" 
+				size="60, 60"
+				default-value="0.4"
+				min-value="0"
+				max-value="1"
+				height-of-one-image="60"
+				sub-pixmaps="128"
+				zoom-factor="1.5"/>
+			<view 
+				class="CTextLabel" 
+				origin="400, 78" 
+				size="90, 18" 
+				font="label_font" 
+				font-color="text_main" 
+				text-alignment="center" 
+				title="Saturation"
+				transparent="true"/>
+			<view 
+				class="CParamDisplay" 
+				control-tag="Saturation" 
+				origin="400, 95" 
+				size="90, 16" 
+				font="value_font" 
+				font-color="accent_pink" 
+				text-alignment="center"
+				transparent="true"
+				value-precision="0"/>
+		</view>
+		
+		<!-- Bottom Row Panel -->
+		<view 
+			class="CViewContainer" 
+			origin="20, 220" 
+			size="560, 120" 
+			background-color="bg_panel"
+			round-rect-radius="8">
+			
+			<!-- Reverb Mix Knob -->
+			<view 
+				class="CAnimKnob" 
+				control-tag="ReverbMix" 
+				origin="25, 15" 
+				size="60, 60"
+				default-value="0.4"
+				min-value="0"
+				max-value="1"
+				height-of-one-image="60"
+				sub-pixmaps="128"
+				zoom-factor="1.5"/>
+			<view 
+				class="CTextLabel" 
+				origin="10, 78" 
+				size="90, 18" 
+				font="label_font" 
+				font-color="text_main" 
+				text-alignment="center" 
+				title="Reverb Mix"
+				transparent="true"/>
+			<view 
+				class="CParamDisplay" 
+				control-tag="ReverbMix" 
+				origin="10, 95" 
+				size="90, 16" 
+				font="value_font" 
+				font-color="accent_purple" 
+				text-alignment="center"
+				transparent="true"
+				value-precision="0"/>
+			
+			<!-- Reverb Decay Knob -->
+			<view 
+				class="CAnimKnob" 
+				control-tag="ReverbDecay" 
+				origin="155, 15" 
+				size="60, 60"
+				default-value="0.6"
+				min-value="0"
+				max-value="1"
+				height-of-one-image="60"
+				sub-pixmaps="128"
+				zoom-factor="1.5"/>
+			<view 
+				class="CTextLabel" 
+				origin="140, 78" 
+				size="90, 18" 
+				font="label_font" 
+				font-color="text_main" 
+				text-alignment="center" 
+				title="Reverb Decay"
+				transparent="true"/>
+			<view 
+				class="CParamDisplay" 
+				control-tag="ReverbDecay" 
+				origin="140, 95" 
+				size="90, 16" 
+				font="value_font" 
+				font-color="accent_purple" 
+				text-alignment="center"
+				transparent="true"
+				value-precision="0"/>
+			
+			<!-- Stereo Width Knob -->
+			<view 
+				class="CAnimKnob" 
+				control-tag="StereoWidth" 
+				origin="285, 15" 
+				size="60, 60"
+				default-value="0.5"
+				min-value="0"
+				max-value="1"
+				height-of-one-image="60"
+				sub-pixmaps="128"
+				zoom-factor="1.5"/>
+			<view 
+				class="CTextLabel" 
+				origin="270, 78" 
+				size="90, 18" 
+				font="label_font" 
+				font-color="text_main" 
+				text-alignment="center" 
+				title="Stereo Width"
+				transparent="true"/>
+			<view 
+				class="CParamDisplay" 
+				control-tag="StereoWidth" 
+				origin="270, 95" 
+				size="90, 16" 
+				font="value_font" 
+				font-color="accent_purple" 
+				text-alignment="center"
+				transparent="true"
+				value-precision="0"/>
+			
+			<!-- Master Mix Knob -->
+			<view 
+				class="CAnimKnob" 
+				control-tag="MasterMix" 
+				origin="415, 15" 
+				size="60, 60"
+				default-value="0.5"
+				min-value="0"
+				max-value="1"
+				height-of-one-image="60"
+				sub-pixmaps="128"
+				zoom-factor="1.5"/>
+			<view 
+				class="CTextLabel" 
+				origin="400, 78" 
+				size="90, 18" 
+				font="label_font" 
+				font-color="text_main" 
+				text-alignment="center" 
+				title="Master Mix"
+				transparent="true"/>
+			<view 
+				class="CParamDisplay" 
+				control-tag="MasterMix" 
+				origin="400, 95" 
+				size="90, 16" 
+				font="value_font" 
+				font-color="accent_pink" 
+				text-alignment="center"
+				transparent="true"
+				value-precision="0"/>
+		</view>
+		
+		<!-- Footer -->
+		<view 
+			class="CTextLabel" 
+			origin="0, 355" 
+			size="600, 18" 
+			font="value_font" 
+			font-color="text_dim" 
+			text-alignment="center" 
+			title="Touhou-Inspired Audio Effects"
+			transparent="true"/>
+	</template>
+	<custom>
+		<attributes name="FocusDrawing"/>
+		<attributes Path="/Users/iairu/Desktop/VST/Zone/Zone/resource/editor.uidesc" name="VST3Editor"/>
+		<attributes Grids="1x 1,5x 5,10x 10,12x 12,15x 15" name="UIGridController"/>
+		<attributes SelectedTemplate="view" name="UITemplateController"/>
+		<attributes EditViewScale="1" EditorSize="0, 0, 600, 600" SplitViewSize_0_0="0.75" SplitViewSize_0_1="0.21" SplitViewSize_1_0="0.48" SplitViewSize_1_1="0.51" SplitViewSize_2_0="0.64" SplitViewSize_2_1="0.35" TabSwitchValue="0" Version="1" name="UIEditController"/>
+		<attributes name="UIAttributesController"/>
+		<attributes SelectedRow="7" name="UIViewCreatorDataSource"/>
+	</custom>
+	<bitmaps/>
+</vstgui-ui-description>
