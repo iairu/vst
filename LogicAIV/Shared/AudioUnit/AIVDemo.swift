@@ -190,8 +190,8 @@ public class AIVDemo: AUAudioUnit {
 
             let size = CGSize(width: config.width, height: config.height)
 
-            if size.width <= min.width && size.height <= min.height ||
-                size.width >= max.width && size.height >= max.height ||
+            if (size.width >= min.width && size.width <= max.width &&
+                size.height >= min.height && size.height <= max.height) ||
                 size == .zero {
 
                 indexSet.insert(index)

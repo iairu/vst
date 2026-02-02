@@ -321,8 +321,8 @@ public:
 private:
   void updateEQ() {
     for (auto &eq : mEQBand1)
-      eq.calculateCoefficients(BiquadFilter::LowShelf, mEQ1Freq, mEQ1Q,
-                               mEQ1Gain, mSampleRate);
+      eq.calculateCoefficients(BiquadFilter::LowPass, mEQ1Freq, mEQ1Q, mEQ1Gain,
+                               mSampleRate);
     for (auto &eq : mEQBand2)
       eq.calculateCoefficients(BiquadFilter::Peaking, mEQ2Freq, mEQ2Q, mEQ2Gain,
                                mSampleRate);

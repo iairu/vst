@@ -17,15 +17,16 @@ const double kPi = 3.14159265358979323846;
 // --- Biquad Filter (EQ) ---
 class BiquadFilter {
 public:
-  enum Type { LowShelf, HighShelf, Peaking };
+  enum Type { LowShelf, HighShelf, Peaking, LowPass, HighPass };
 
   void calculateCoefficients(Type type, double freq, double Q, double dbGain,
                              double sampleRate) {
     if (Q < 0.1)
       Q = 0.1;
-    Q = 0.1;
+
     double A = std::pow(10.0, dbGain / 40.0);
     double w0 = 2.0 * kPi * freq / sampleRate;
+
     double alpha = std::sin(w0) / (2.0 * Q);
     double cosw0 = std::cos(w0);
 
@@ -57,6 +58,24 @@ public:
       a0 = 1 + alpha / A;
       a1 = -2 * cosw0;
       a2 = 1 - alpha / A;
+      break;
+    }
+    case LowPass: {
+      b0 = (1 - cosw0) / 2;
+      b1 = 1 - cosw0;
+      b2 = (1 - cosw0) / 2;
+      a0 = 1 + alpha;
+      a1 = -2 * cosw0;
+      a2 = 1 - alpha;
+      break;
+    }
+    case HighPass: {
+      b0 = (1 + cosw0) / 2;
+      b1 = -(1 + cosw0);
+      b2 = (1 + cosw0) / 2;
+      a0 = 1 + alpha;
+      a1 = -2 * cosw0;
+      a2 = 1 - alpha;
       break;
     }
     }
