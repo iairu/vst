@@ -1,0 +1,21 @@
+./AIV.xcodeproj/project.xcworkspace/xcuserdata/iairu.xcuserdatad/UserInterfaceState.xcuserstate
+./AIV.xcodeproj/project.xcworkspace/xcuserdata/v.xcuserdatad/UserInterfaceState.xcuserstate
+./AIV.xcodeproj/xcshareddata/xcschemes/AIVFramework macOS.xcscheme
+./AIV.xcodeproj/xcshareddata/xcschemes/AIVFramework iOS.xcscheme
+./AIV.xcodeproj/xcshareddata/xcschemes/AIVExtension iOS.xcscheme
+./AIV.xcodeproj/xcshareddata/xcschemes/AIVExtension macOS.xcscheme
+./AIV.xcodeproj/xcshareddata/xcschemes/AIV macOS.xcscheme
+./AIV.xcodeproj/xcshareddata/xcschemes/AIV iOS.xcscheme
+./iOS/AIVExtension/AIVDemoViewControllerExtension.swift
+./iOS/AIVExtension/Base.lproj/MainInterface.storyboard
+./iOS/AIVExtension/Info.plist
+./iOS/AIVFramework/AIVFramework.h
+./iOS/AIV/MainViewController.swift
+./iOS/AIV/Base.lproj/Main.storyboard
+./README.md
+./.git/config
+./.git/logs/HEAD
+./.git/logs/refs/heads/master
+./.git/logs/refs/remotes/origin/HEAD
+./.git/index
+./.git/FETCH_HEAD
