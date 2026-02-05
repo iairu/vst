@@ -97,6 +97,36 @@ struct ModernSlider: View {
                 }
             }
             .frame(height: 10)
+    }
+}
+
+struct EffectGroup<Content: View>: View {
+    var title: String
+    var content: Content
+    
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(.cyan)
+                .tracking(1)
+            
+            VStack {
+                content
+            }
+            .padding()
+            .background(Color.black.opacity(0.3))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+            )
         }
     }
 }
+

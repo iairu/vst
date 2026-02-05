@@ -257,33 +257,127 @@ private:
   double envelope = 0.0;
 };
 
+// --- Noise Gate (Intelligent w/ Hysteresis) ---
+class NoiseGate {
+public:
+  void setParameters(double thresholdDb, double rangeDb, double attackMs,
+                     double holdMs, double releaseMs, double hysteresisDb,
+                     double sampleRate) {
+    this->openThreshold = pow(10.0, thresholdDb / 20.0);
+    this->closeThreshold = pow(10.0, (thresholdDb - hysteresisDb) / 20.0);
+
+    // Range: -80dB to 0dB.
+    // If range is -20dB, gain factor is 0.1.
+    this->rangeFactor = pow(10.0, rangeDb / 20.0);
+
+    // Time constants
+    this->attackCoeff = exp(-1.0 / (sampleRate * attackMs / 1000.0));
+    this->releaseCoeff = exp(-1.0 / (sampleRate * releaseMs / 1000.0));
+
+    this->holdSamples = (int)(holdMs / 1000.0 * sampleRate);
+  }
+
+  float process(float input) {
+    float absInput = fabs(input);
+
+    // Envelope Follower (Decoupled)
+    if (absInput > envelope)
+      envelope = attackCoeff * (envelope - absInput) + absInput;
+    else
+      envelope = releaseCoeff * (envelope - absInput) + absInput;
+
+    // State Machine
+    if (isGateOpen) {
+      if (envelope < closeThreshold) {
+        // Should close, check hold
+        if (holdCounter >= holdSamples) {
+          isGateOpen = false;
+        } else {
+          holdCounter++;
+        }
+      } else {
+        // Signal is strong, reset hold
+        holdCounter = 0;
+      }
+    } else {
+      // Gate Closed
+      if (envelope > openThreshold) {
+        isGateOpen = true;
+        holdCounter = 0;
+      }
+    }
+
+    // Apply Gain
+    // Smooth transition?
+    // Logic: if Open, gain = 1.0. If Closed, gain = rangeFactor.
+    // Needs smoothing to avoid clicks.
+    // We use a separate 'gainEnvelope' for the actual VCA
+
+    double targetGain = isGateOpen ? 1.0 : rangeFactor;
+
+    // Attack/Release for the gain element itself (smoothing)
+    // Use fixed fast smoothing or reuse attack/release params?
+    // Prompt says "Release: The speed at which the signal fades to the Range
+    // level" So we smooth the gain change.
+    if (targetGain > currentGain)
+      currentGain =
+          attackCoeff * (currentGain - targetGain) + targetGain; // Opening
+    else
+      currentGain =
+          releaseCoeff * (currentGain - targetGain) + targetGain; // Closing
+
+    return input * (float)currentGain;
+  }
+
+private:
+  double openThreshold = 0.0;
+  double closeThreshold = 0.0;
+  double rangeFactor = 0.0;
+  double attackCoeff = 0.0;
+  double releaseCoeff = 0.0;
+
+  double envelope = 0.0;
+  double currentGain = 0.0;
+
+  bool isGateOpen = false;
+  int holdSamples = 0;
+  int holdCounter = 0;
+};
+
 // --- Deesser ---
 class Deesser {
 public:
-  void setParameters(double thresholdDb, double frequency, double ratio,
-                     double sampleRate) {
+  void setParameters(double thresholdDb, double frequency, double rangeDb,
+                     double ratio, double sampleRate) {
     this->threshold = pow(10.0, thresholdDb / 20.0);
     this->ratio = ratio;
+    this->maxAttenuation = pow(10.0, rangeDb / 20.0); // e.g. -6dB = 0.5
 
-    // Setup sidechain HighPass filter
-    sidechainFilter.calculateCoefficients(BiquadFilter::HighPass, frequency,
+    // Split Band Architecture:
+    // Use LowPass for crossover.
+    // LowBand = LPF(Input)
+    // HighBand = Input - LowBand
+    crossoverFilter.calculateCoefficients(BiquadFilter::LowPass, frequency,
                                           0.707, 0.0, sampleRate);
 
-    // Fast attack, medium release for sibilance
-    attack = exp(-1.0 / (sampleRate * 2.0 / 1000.0));   // 2ms
+    // Timing
+    attack = exp(-1.0 / (sampleRate * 0.5 / 1000.0));   // 0.5ms fast attack
     release = exp(-1.0 / (sampleRate * 50.0 / 1000.0)); // 50ms
   }
 
   float process(float input) {
-    // Filter input for detection
-    float filtered = sidechainFilter.process(input);
-    double absInput = fabs(filtered);
+    // Split
+    float lowBand = crossoverFilter.process(input);
+    float highBand = input - lowBand;
+
+    // Detect on High Band
+    double absHigh = fabs(highBand);
 
     // Envelope
-    if (absInput > envelope)
-      envelope = attack * (envelope - absInput) + absInput;
+    if (absHigh > envelope)
+      envelope = attack * (envelope - absHigh) + absHigh;
     else
-      envelope = release * (envelope - absInput) + absInput;
+      envelope = release * (envelope - absHigh) + absHigh;
 
     // Gain reduction
     double gain = 1.0;
@@ -291,52 +385,92 @@ public:
       gain = pow(envelope / threshold, 1.0 / ratio - 1.0);
     }
 
-    return input * gain;
+    // Range Check
+    if (gain < maxAttenuation)
+      gain = maxAttenuation;
+
+    // Apply GR to HighBand only
+    float processedHigh = highBand * gain;
+
+    // Sum back
+    return lowBand + processedHigh;
   }
 
 private:
-  BiquadFilter sidechainFilter;
+  BiquadFilter crossoverFilter;
   double threshold = 0.5;
   double ratio = 5.0;
+  double maxAttenuation = 0.5;
   double envelope = 0.0;
   double attack = 0.0;
   double release = 0.0;
 };
 
-// --- Simple Compressor ---
-class SimpleCompressor {
+// --- FET Compressor (AIV 76) ---
+class FETCompressor {
 public:
-  void setParameters(double threshDb, double ratio, double attackMs,
+  void setParameters(double inputDb, double ratio, double attackMs,
                      double releaseMs, double makeupDb, double sampleRate) {
-    threshold = pow(10.0, threshDb / 20.0);
+    // 1. Input Drive (Gain before detector)
+    // Range is -48 to +12 usually.
+    this->inputGain = pow(10.0, inputDb / 20.0);
+
+    // 2. Ratio
     this->ratio = ratio;
-    attack = exp(-1.0 / (sampleRate * attackMs / 1000.0));
-    release = exp(-1.0 / (sampleRate * releaseMs / 1000.0));
-    makeup = pow(10.0, makeupDb / 20.0);
+
+    // 3. Time Constants (Microseconds for Attack)
+    // Attack: 20us to 800us.
+    // Physics: tau = -1 / (fs * ln(1 - 0.632))
+    // Formula from prompt: exp(-1 / (time * sampleRate))
+    // Note: time in seconds.
+    this->attackCoeff = exp(-1.0 / (sampleRate * attackMs / 1000.0));
+
+    // Release: 50ms to 1100ms
+    this->releaseCoeff = exp(-1.0 / (sampleRate * releaseMs / 1000.0));
+
+    // 4. Makeup
+    this->makeupGain = pow(10.0, makeupDb / 20.0);
+
+    // Fixed Threshold (-20 dBFS internally)
+    this->threshold = pow(10.0, -20.0 / 20.0); // 0.1
   }
 
   float process(float input) {
-    double absInput = fabs(input);
+    // Apply Input Drive
+    float drivenSignal = input * inputGain;
+    float absInput = fabs(drivenSignal);
 
-    // Envelope follower
+    // Peak Detector (Feedback topology simulation? No, prompt says Fixed
+    // Threshold, input drives into it.) 1176 is feedback, but for digital
+    // simplified model, feedforward with fixed threshold behaves similarly if
+    // detector is after input gain.
+
+    // Envelope
     if (absInput > envelope)
-      envelope = attack * (envelope - absInput) + absInput;
+      envelope = attackCoeff * (envelope - absInput) + absInput;
     else
-      envelope = release * (envelope - absInput) + absInput;
+      envelope = releaseCoeff * (envelope - absInput) + absInput;
 
-    // Gain reduction
+    // Gain Reduction
     double gain = 1.0;
     if (envelope > threshold) {
-      if (ratio > 0.0)
-        gain = pow(envelope / threshold, 1.0 / ratio - 1.0);
+      // Gain reduction formula
+      // GR = (env / thresh) ^ (1/R - 1)
+      gain = pow(envelope / threshold, 1.0 / ratio - 1.0);
     }
 
-    return (float)(input * gain * makeup);
+    // Apply GR to the driven signal (or original? Standard 1176: Input gain IS
+    // the volume knob) So output is drivenSignal * gain * makeup.
+    return (float)(drivenSignal * gain * makeupGain);
   }
 
 private:
-  double threshold = 1.0, ratio = 1.0, attack = 0.0, release = 0.0,
-         makeup = 1.0;
+  double inputGain = 1.0;
+  double threshold = 0.1; // -20dB
+  double ratio = 4.0;
+  double attackCoeff = 0.0;
+  double releaseCoeff = 0.0;
+  double makeupGain = 1.0;
   double envelope = 0.0;
 };
 

@@ -48,9 +48,18 @@ typedef NS_ENUM(AUParameterAddress, AIVParameterAddress) {
   AIVParameterAddressDeesserThresh = 29,
   AIVParameterAddressDeesserFreq = 30,
   AIVParameterAddressDeesserRatio = 31,
+  AIVParameterAddressDeesserRange = 32,
 
-  AIVParameterAddressCutoff = 32,
-  AIVParameterAddressResonance = 33,
+  // Gate
+  AIVParameterAddressGateThresh = 40,
+  AIVParameterAddressGateRange = 41,
+  AIVParameterAddressGateAttack = 42,
+  AIVParameterAddressGateHold = 43,
+  AIVParameterAddressGateRelease = 44,
+  AIVParameterAddressGateHysteresis = 45,
+
+  AIVParameterAddressCutoff = 50,
+  AIVParameterAddressResonance = 51,
 
   AIVParameterAddressInputGain = 34,
   AIVParameterAddressSaturation = 35,

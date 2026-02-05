@@ -31,6 +31,7 @@ public:
 
     // Resize DSP modules for each channel
     mAutoLevel.resize(mChannelCount);
+    mGate.resize(mChannelCount);
     mPitch.resize(mChannelCount);
     mDeesser.resize(mChannelCount);
     mSafetyHPF.resize(mChannelCount);
@@ -44,6 +45,7 @@ public:
     mReverb.resize(mChannelCount);
 
     updateAutoLevel();
+    updateGate();
     updateDeesser();
     updateEQ();
     updateComp();
@@ -78,6 +80,32 @@ public:
       break;
     case AIVParameterAddressPhaseInvert:
       mPhaseInvert = (value > 0.5f);
+      break;
+
+    // Gate
+    case AIVParameterAddressGateThresh:
+      mGateThresh = value;
+      updateGate();
+      break;
+    case AIVParameterAddressGateRange:
+      mGateRange = value;
+      updateGate();
+      break;
+    case AIVParameterAddressGateAttack:
+      mGateAttack = value;
+      updateGate();
+      break;
+    case AIVParameterAddressGateHold:
+      mGateHold = value;
+      updateGate();
+      break;
+    case AIVParameterAddressGateRelease:
+      mGateRelease = value;
+      updateGate();
+      break;
+    case AIVParameterAddressGateHysteresis:
+      mGateHysteresis = value;
+      updateGate();
       break;
 
     // Auto Level
@@ -383,6 +411,14 @@ public:
           sample = -sample;
         }
 
+        // 0b. Noise Gate (Prompt 2.1)
+        /*
+          Research Note (Section 3):
+          Gate uses Hysteresis (Dual Thresholds) to prevent chatter.
+          Open Thresh = User Param. Close Thresh = Open - Hysteresis.
+        */
+        sample = mGate[channel].process(sample);
+
         // 1. Auto Level
         sample = mAutoLevel[channel].process(sample);
 
@@ -409,7 +445,13 @@ public:
         // Band 3: High Shelf (Biquad)
         sample = mEQBand3[channel].process(sample);
 
-        // 3. Compressor
+        // 3. Compressor (FET / AIV 76)
+        /*
+         Research Note (Section 6.1):
+         FET Compressor uses a Fixed Threshold. The user drives the signal
+         *into* the threshold. Attack time is defined as time to reach 63.2% of
+         reduction. 1176 attack is microsecond scale.
+         */
         sample = mCompressor[channel].process(sample);
 
         // 4. Saturation
@@ -450,10 +492,16 @@ private:
                        mSampleRate);
   }
 
+  void updateGate() {
+    for (auto &g : mGate)
+      g.setParameters(mGateThresh, mGateRange, mGateAttack, mGateHold,
+                      mGateRelease, mGateHysteresis, mSampleRate);
+  }
+
   void updateDeesser() {
     for (auto &ds : mDeesser)
-      ds.setParameters(mDeesserThresh, mDeesserFreq, mDeesserRatio,
-                       mSampleRate);
+      ds.setParameters(mDeesserThresh, mDeesserFreq, mDeesserRange,
+                       mDeesserRatio, mSampleRate);
   }
 
   void updateEQ() {
@@ -482,6 +530,11 @@ private:
 
   void updateComp() {
     for (auto &c : mCompressor)
+      // Note: mCompThresh is now mapped to Input Drive in SetParameters, but
+      // variable name legacy. We will rename the member variable in next step
+      // or just reuse it as "Input". Actually, let's fix the variable name
+      // mapping in this file too. Wait, mCompThresh is just a float storage. I
+      // will use it as Input Drive.
       c.setParameters(mCompThresh, mCompRatio, mCompAttack, mCompRelease,
                       mCompMakeup, mSampleRate);
   }
@@ -517,12 +570,13 @@ private:
   // DSP Modules (Vector for multi-channel)
   std::vector<PitchShifter> mPitch;
   std::vector<AutoLevel> mAutoLevel;
+  std::vector<NoiseGate> mGate;
   std::vector<Deesser> mDeesser;
   std::vector<ZDFFilter> mSafetyHPF;
   std::vector<ZDFFilter> mHPF;
   std::vector<ZDFFilter> mLowMidCut;
   std::vector<BiquadFilter> mEQBand3;
-  std::vector<SimpleCompressor> mCompressor;
+  std::vector<FETCompressor> mCompressor;
   std::vector<Saturator> mSaturator;
   std::vector<DelayLine> mDelay;
   std::vector<SchroederReverb> mReverb;
@@ -532,7 +586,12 @@ private:
   float mPitchSpeed = 20;
 
   float mAutoLevelTarget = -10, mAutoLevelRange = 12, mAutoLevelSpeed = 50;
-  float mDeesserThresh = -20, mDeesserFreq = 5000, mDeesserRatio = 5;
+
+  float mGateThresh = -40, mGateRange = -20, mGateAttack = 1.0, mGateHold = 150,
+        mGateRelease = 300, mGateHysteresis = 6.0;
+
+  float mDeesserThresh = -20, mDeesserFreq = 5000, mDeesserRatio = 5,
+        mDeesserRange = -6.0;
 
   float mEQ1Freq = 100, mEQ1Gain = 0, mEQ1Q = 0.7;
   float mEQ2Freq = 1000, mEQ2Gain = 0, mEQ2Q = 0.7;

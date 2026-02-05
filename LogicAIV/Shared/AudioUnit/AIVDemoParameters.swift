@@ -28,7 +28,8 @@ class AIVDemoParameters {
         case eqBand3Freq = 10
         case eqBand3Gain = 11
         case eqBand3Q = 12
-        case compThresh = 13
+
+        case compInput = 13 // Was compThresh
         case compRatio = 14
         case compAttack = 15
         case compRelease = 16
@@ -47,8 +48,17 @@ class AIVDemoParameters {
         case deesserThresh = 29
         case deesserFreq = 30
         case deesserRatio = 31
-        case cutoff = 32
-        case resonance = 33
+        case deesserRange = 32
+        
+        case gateThresh = 40
+        case gateRange = 41
+        case gateAttack = 42
+        case gateHold = 43
+        case gateRelease = 44
+        case gateHysteresis = 45
+
+        case cutoff = 50
+        case resonance = 51
     }
 
     // Parameters
@@ -77,7 +87,7 @@ class AIVDemoParameters {
     var eqBand3QParam: AUParameter!
     
     // Compressor
-    var compThreshParam: AUParameter!
+    var compInputParam: AUParameter! // Was compThreshParam
     var compRatioParam: AUParameter!
     var compAttackParam: AUParameter!
     var compReleaseParam: AUParameter!
@@ -106,6 +116,15 @@ class AIVDemoParameters {
     var deesserThreshParam: AUParameter!
     var deesserFreqParam: AUParameter!
     var deesserRatioParam: AUParameter!
+    var deesserRangeParam: AUParameter!
+    
+    // Gate
+    var gateThreshParam: AUParameter!
+    var gateRangeParam: AUParameter!
+    var gateAttackParam: AUParameter!
+    var gateHoldParam: AUParameter!
+    var gateReleaseParam: AUParameter!
+    var gateHysteresisParam: AUParameter!
 
     // Filter (Legacy)
     var cutoffParam: AUParameter!
@@ -166,16 +185,19 @@ class AIVDemoParameters {
         eqBand3QParam.value = 0.707
         
         // Compressor
-        compThreshParam = AUParameterTree.createParameter(withIdentifier: "compThresh", name: "Threshold", address: AIVParam.compThresh.rawValue, min: -60.0, max: 0.0, unit: .decibels, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
-        compThreshParam.value = 0.0
+        // Input Drive (FET Style): -48 to +12 dB
+        compInputParam = AUParameterTree.createParameter(withIdentifier: "compInput", name: "Input", address: AIVParam.compInput.rawValue, min: -48.0, max: 12.0, unit: .decibels, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        compInputParam.value = -18.0
         
         compRatioParam = AUParameterTree.createParameter(withIdentifier: "compRatio", name: "Ratio", address: AIVParam.compRatio.rawValue, min: 1.0, max: 20.0, unit: .ratio, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
-        compRatioParam.value = 1.0
+        compRatioParam.value = 4.0 // Default 4:1
         
-        compAttackParam = AUParameterTree.createParameter(withIdentifier: "compAttack", name: "Attack", address: AIVParam.compAttack.rawValue, min: 0.1, max: 100.0, unit: .milliseconds, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
-        compAttackParam.value = 10.0
+        // Attack: 20us to 800us (0.02ms to 0.8ms)
+        compAttackParam = AUParameterTree.createParameter(withIdentifier: "compAttack", name: "Attack", address: AIVParam.compAttack.rawValue, min: 0.02, max: 0.8, unit: .milliseconds, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        compAttackParam.value = 0.4
         
-        compReleaseParam = AUParameterTree.createParameter(withIdentifier: "compRelease", name: "Release", address: AIVParam.compRelease.rawValue, min: 10.0, max: 1000.0, unit: .milliseconds, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        // Release: 50ms to 1100ms
+        compReleaseParam = AUParameterTree.createParameter(withIdentifier: "compRelease", name: "Release", address: AIVParam.compRelease.rawValue, min: 50.0, max: 1100.0, unit: .milliseconds, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
         compReleaseParam.value = 100.0
         
         compMakeupParam = AUParameterTree.createParameter(withIdentifier: "compMakeup", name: "Makeup", address: AIVParam.compMakeup.rawValue, min: 0.0, max: 24.0, unit: .decibels, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
@@ -220,6 +242,28 @@ class AIVDemoParameters {
 
         deesserRatioParam = AUParameterTree.createParameter(withIdentifier: "deesserRatio", name: "Deess Ratio", address: AIVParam.deesserRatio.rawValue, min: 1.0, max: 20.0, unit: .ratio, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
         deesserRatioParam.value = 5.0
+        
+        deesserRangeParam = AUParameterTree.createParameter(withIdentifier: "deesserRange", name: "Deess Range", address: AIVParam.deesserRange.rawValue, min: -24.0, max: 0.0, unit: .decibels, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        deesserRangeParam.value = -6.0
+
+        // Gate
+        gateThreshParam = AUParameterTree.createParameter(withIdentifier: "gateThresh", name: "Gate Thresh", address: AIVParam.gateThresh.rawValue, min: -80.0, max: 0.0, unit: .decibels, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        gateThreshParam.value = -40.0
+        
+        gateRangeParam = AUParameterTree.createParameter(withIdentifier: "gateRange", name: "Gate Range", address: AIVParam.gateRange.rawValue, min: -80.0, max: 0.0, unit: .decibels, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        gateRangeParam.value = -20.0
+        
+        gateAttackParam = AUParameterTree.createParameter(withIdentifier: "gateAttack", name: "Gate Attack", address: AIVParam.gateAttack.rawValue, min: 0.01, max: 100.0, unit: .milliseconds, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        gateAttackParam.value = 1.0
+        
+        gateHoldParam = AUParameterTree.createParameter(withIdentifier: "gateHold", name: "Gate Hold", address: AIVParam.gateHold.rawValue, min: 0.0, max: 1000.0, unit: .milliseconds, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        gateHoldParam.value = 150.0
+        
+        gateReleaseParam = AUParameterTree.createParameter(withIdentifier: "gateRelease", name: "Gate Release", address: AIVParam.gateRelease.rawValue, min: 10.0, max: 2000.0, unit: .milliseconds, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        gateReleaseParam.value = 300.0
+        
+        gateHysteresisParam = AUParameterTree.createParameter(withIdentifier: "gateHysteresis", name: "Gate Hysteresis", address: AIVParam.gateHysteresis.rawValue, min: 0.0, max: 12.0, unit: .decibels, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        gateHysteresisParam.value = 6.0
 
         // Filter
         cutoffParam = AUParameterTree.createParameter(withIdentifier: "cutoff", name: "Cutoff", address: AIVParam.cutoff.rawValue, min: 20.0, max: 20000.0, unit: .hertz, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
@@ -237,12 +281,13 @@ class AIVDemoParameters {
             eqBand1FreqParam, eqBand1GainParam, eqBand1QParam,
             eqBand2FreqParam, eqBand2GainParam, eqBand2QParam,
             eqBand3FreqParam, eqBand3GainParam, eqBand3QParam,
-            compThreshParam, compRatioParam, compAttackParam, compReleaseParam, compMakeupParam,
+            compInputParam, compRatioParam, compAttackParam, compReleaseParam, compMakeupParam,
             satDriveParam, satTypeParam,
             delayTimeParam, delayFeedbackParam, delayMixParam,
             reverbSizeParam, reverbDampParam, reverbMixParam,
             autoLevelTargetParam, autoLevelRangeParam, autoLevelSpeedParam,
-            deesserThreshParam, deesserFreqParam, deesserRatioParam,
+            deesserThreshParam, deesserFreqParam, deesserRatioParam, deesserRangeParam,
+            gateThreshParam, gateRangeParam, gateAttackParam, gateHoldParam, gateReleaseParam, gateHysteresisParam,
             cutoffParam, resonanceParam
         ])
 

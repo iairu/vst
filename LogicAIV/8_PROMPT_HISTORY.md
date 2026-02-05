@@ -99,7 +99,11 @@ here is the project structure:
 ./2-PROMPT_HISTORY_AFTER_INIT_RESEARCH.md
 ./1-INIT_RESEARCH.md
 
+---
+
 when done update UX and UI based on robust code from prompt 1.2 from 7_PROMPT_GALLERY.md, include code comments from research 5_PHYSICS_RESEARCH.md
 
-
 ---
+
+update AIV and AIVExtension with proper UI and UX, add more code and utilize extension tabs for different modules
+
