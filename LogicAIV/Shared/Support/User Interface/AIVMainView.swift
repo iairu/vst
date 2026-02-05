@@ -313,9 +313,9 @@ struct AIVMainView: View {
                         EffectGroup(title: "EQUALIZER") {
                             HStack(spacing: 30) {
                                 VStack {
-                                    Text("LOW").font(.caption).foregroundColor(.gray)
+                                    Text("HPF").font(.caption).foregroundColor(.gray)
                                     ArcKnob(value: $viewModel.eq1Freq, range: 20...500, title: "FREQ", unit: "Hz")
-                                    ArcKnob(value: $viewModel.eq1Gain, range: -20...20, title: "GAIN", unit: "dB")
+                                    // Gain removed for HPF
                                 }
                                 VStack {
                                     Text("MID").font(.caption).foregroundColor(.gray)

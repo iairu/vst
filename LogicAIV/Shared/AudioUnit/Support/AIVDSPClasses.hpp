@@ -14,7 +14,109 @@
 // Constants
 const double kPi = 3.14159265358979323846;
 
-// --- Biquad Filter (EQ) ---
+// --- ZDF Filter (TPT SVF) ---
+class ZDFFilter {
+public:
+  enum Type { HighPass, Peaking };
+
+  void setParameters(Type type, double freq, double Q, double gainDb,
+                     double sampleRate) {
+    this->type = type;
+
+    // Pre-warp frequency
+    double w = kPi * freq / sampleRate;
+    g = std::tan(w);
+
+    // Q limiting
+    if (Q < 0.1)
+      Q = 0.1;
+    this->Q = Q;
+
+    // Gain (for Peaking)
+    // For peaking, we often adjust Q or K based on gain, but standard TPT:
+    // K = A.
+    // Let's use standard constant-Q peaking logic
+    A = std::pow(
+        10.0,
+        gainDb / 40.0); // A is linear gain^0.5 usually, or just linear logic
+    // Actually standard typically uses A = 10^(G/40).
+
+    // Optimization: Pre-calculate denominator
+    // SVF Feedback scaling: R = 1 / (2*Q) ? Or just use 1/Q damping
+    // Using standard topology:
+    // iceq_d = 1 / (1 + g * (g + 1/Q)); for LP/HP/BP
+    // For Peaking, it varies. Let's use the generalized one.
+  }
+
+  float process(float input) {
+    // 2-pole TPT SVF
+    // Ref: Zavalishin "The Art of VA Filter Design"
+
+    // Damping factor R. Q = 1/(2R) -> R = 1/(2Q)
+    double R = 1.0 / (2.0 * Q);
+
+    // High Pass (12dB/oct)
+    // hp = (vin - (2*R + g)*s1 - s2) / (1 + 2*R*g + g*g)
+    // bp = g * hp + s1
+    // lp = g * bp + s2
+    // s1 = g * hp + bp -> 2*bp - s1 (optimized)
+
+    // Denominator
+    double den = 1.0 + 2.0 * R * g + g * g;
+    double hp = (input - (2.0 * R + g) * s1 - s2) / den;
+    double bp = g * hp + s1;
+    double lp = g * bp + s2;
+
+    // Update states
+    s1 = 2.0 * bp - s1;
+    s2 = 2.0 * lp - s2;
+
+    if (type == HighPass) {
+      return (float)hp;
+    } else {
+      // Peaking: H = 1 + (A^2 - 1) * BP_normalized?
+      // Or H = x + c * BP?
+      // Standard constant-Q peaking TPT:
+      // out = lp + hp + (A*A) * bp / Q ? No.
+
+      // Let's use the normalized bandpass form for peaking:
+      // H_peak = 1 + (A*A - 1) * H_bp
+      // where H_bp = (g/Q * s) / ...
+
+      // Simpler implementation for Peaking in SVF:
+      // mix of Input and Bandpass.
+      // K = A*A - 1.0 (Boost/Cut amount)
+      // With correct gain scaling.
+      // Actually, simpler formula:
+      // y = input + (A*A - 1.0) * bp_normalized
+      // bp_normalized = bp * 2 * R ? (to have 0dB gain at center)
+      // SVF BP transfer at w=wc is 1/(2R). So multiply by 2R.
+
+      double K =
+          std::pow(10.0, std::log10(A * A)) -
+          1.0; // A*A is linear power gain? A is sqrt. A*A is linear gain.
+      // Just use raw linear gain
+      double linearGain = A * A;
+
+      // Bandpass normalized to 0dB peak
+      double bpNorm = bp * 2.0 * R; // Peak is 1
+
+      return (float)(input + (linearGain - 1.0) * bpNorm);
+    }
+  }
+
+  void reset() {
+    s1 = 0;
+    s2 = 0;
+  }
+
+private:
+  Type type = HighPass;
+  double g = 0.0;
+  double Q = 0.707;
+  double A = 1.0;
+  double s1 = 0.0, s2 = 0.0;
+};
 class BiquadFilter {
 public:
   enum Type { LowShelf, HighShelf, Peaking, LowPass, HighPass };

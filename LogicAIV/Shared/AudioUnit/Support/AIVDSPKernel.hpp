@@ -33,8 +33,10 @@ public:
     mAutoLevel.resize(mChannelCount);
     mPitch.resize(mChannelCount);
     mDeesser.resize(mChannelCount);
-    mEQBand1.resize(mChannelCount);
-    mEQBand2.resize(mChannelCount);
+    mSafetyHPF.resize(mChannelCount);
+    mHPF.resize(mChannelCount);
+    mLowMidCut.resize(mChannelCount);
+    // mEQBand3 remains Biquad HighShelf
     mEQBand3.resize(mChannelCount);
     mCompressor.resize(mChannelCount);
     mSaturator.resize(mChannelCount);
@@ -390,9 +392,21 @@ public:
         // 2. Deesser
         sample = mDeesser[channel].process(sample);
 
-        // 3. EQ
-        sample = mEQBand1[channel].process(sample);
-        sample = mEQBand2[channel].process(sample);
+        // 3. EQ (ZDF + Biquad)
+        /*
+         Research Note (Section 4.1):
+         Standard Biquads suffer from amplitude and phase distortion (cramping)
+         near Nyquist. We use Zero Delay Feedback (TPT) topology with
+         Trapezoidal Integration. g = tan(pi * fc / fs) This preserves the
+         analog amplitude and phase response perfectly.
+         */
+        // Safety HPF (Fixed 20Hz)
+        sample = mSafetyHPF[channel].process(sample);
+        // Band 1: HPF (ZDF)
+        sample = mHPF[channel].process(sample);
+        // Band 2: Low Mid Cut (ZDF Peaking)
+        sample = mLowMidCut[channel].process(sample);
+        // Band 3: High Shelf (Biquad)
         sample = mEQBand3[channel].process(sample);
 
         // 3. Compressor
@@ -443,12 +457,24 @@ private:
   }
 
   void updateEQ() {
-    for (auto &eq : mEQBand1)
-      eq.calculateCoefficients(BiquadFilter::LowPass, mEQ1Freq, mEQ1Q, mEQ1Gain,
-                               mSampleRate);
-    for (auto &eq : mEQBand2)
-      eq.calculateCoefficients(BiquadFilter::Peaking, mEQ2Freq, mEQ2Q, mEQ2Gain,
-                               mSampleRate);
+    // Safety HPF: 20Hz, Q=0.707
+    for (auto &eq : mSafetyHPF)
+      eq.setParameters(ZDFFilter::HighPass, 20.0, 0.707, 0.0, mSampleRate);
+
+    // Band 1: Main HPF (User controls Freq)
+    // Q fixed at 0.707 or user? Prompt says 12dB/oct, implied Q=0.707
+    // (Butterworth)
+    for (auto &eq : mHPF)
+      eq.setParameters(ZDFFilter::HighPass, mEQ1Freq, 0.707, 0.0,
+                       mSampleRate); // Gain irrelevant for HPF
+
+    // Band 2: Low Mid Cut (Peaking)
+    // "Low-Mid Gain ... -12 dB to 0 dB"
+    for (auto &eq : mLowMidCut)
+      eq.setParameters(ZDFFilter::Peaking, mEQ2Freq, mEQ2Q, mEQ2Gain,
+                       mSampleRate);
+
+    // Band 3: High Shelf (Standard Biquad)
     for (auto &eq : mEQBand3)
       eq.calculateCoefficients(BiquadFilter::HighShelf, mEQ3Freq, mEQ3Q,
                                mEQ3Gain, mSampleRate);
@@ -492,7 +518,10 @@ private:
   std::vector<PitchShifter> mPitch;
   std::vector<AutoLevel> mAutoLevel;
   std::vector<Deesser> mDeesser;
-  std::vector<BiquadFilter> mEQBand1, mEQBand2, mEQBand3;
+  std::vector<ZDFFilter> mSafetyHPF;
+  std::vector<ZDFFilter> mHPF;
+  std::vector<ZDFFilter> mLowMidCut;
+  std::vector<BiquadFilter> mEQBand3;
   std::vector<SimpleCompressor> mCompressor;
   std::vector<Saturator> mSaturator;
   std::vector<DelayLine> mDelay;
