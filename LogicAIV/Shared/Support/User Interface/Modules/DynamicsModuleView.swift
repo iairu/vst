@@ -51,10 +51,37 @@ struct DynamicsModuleView: View {
                         ArcKnob(value: $viewModel.compInput, range: -48...12, title: "INPUT", unit: "dB")
                         ArcKnob(value: $viewModel.compRatio, range: 1...20, title: "RATIO")
                     }
+                    }
                     HStack {
                         ArcKnob(value: $viewModel.compAttack, range: 0.02...0.8, title: "ATTACK", unit: "ms")
                         ArcKnob(value: $viewModel.compRelease, range: 50...1100, title: "RELEASE", unit: "ms")
-                        ArcKnob(value: $viewModel.compMakeup, range: 0...24, title: "MAKEUP", unit: "dB")
+                        
+                        VStack(spacing: 5) {
+                            Text("MAKEUP").font(.caption).foregroundStyle(.secondary)
+                            ArcKnob(value: $viewModel.compMakeup, range: 0...24, title: "GAIN")
+                                .frame(width: 60, height: 60)
+                            
+                            Toggle("AUTO", isOn: $viewModel.compAutoMakeup)
+                                .toggleStyle(SwitchToggleStyle(tint: .blue))
+                                .labelsHidden()
+                            Text("AUTO").font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            
+            // OUTPUT LIMITER
+            EffectGroup(title: "OUTPUT LIMITERS") {
+                HStack(spacing: 20) {
+                     VStack {
+                        Text("CEILING").font(.caption).foregroundStyle(.secondary)
+                        ArcKnob(value: $viewModel.limiterCeiling, range: -6.0...0.0, title: "dB")
+                            .frame(width: 60, height: 60)
+                    }
+                    VStack {
+                        Text("LOOKAHEAD").font(.caption).foregroundStyle(.secondary)
+                        ArcKnob(value: $viewModel.limiterLookahead, range: 0.1...5.0, title: "ms")
+                            .frame(width: 60, height: 60)
                     }
                 }
             }

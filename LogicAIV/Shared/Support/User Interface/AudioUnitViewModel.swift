@@ -49,6 +49,11 @@ class AudioUnitViewModel: ObservableObject {
     @Published var compAttack: Double = 0.4 { didSet { setParam(compAttackParam, compAttack) } }
     @Published var compRelease: Double = 100 { didSet { setParam(compReleaseParam, compRelease) } }
     @Published var compMakeup: Double = 0 { didSet { setParam(compMakeupParam, compMakeup) } }
+    @Published var compAutoMakeup: Bool = false { didSet { setParam(compAutoMakeupParam, compAutoMakeup ? 1.0 : 0.0) } }
+
+    // Limiter
+    @Published var limiterCeiling: Double = -0.1 { didSet { setParam(limiterCeilingParam, limiterCeiling) } }
+    @Published var limiterLookahead: Double = 2.0 { didSet { setParam(limiterLookaheadParam, limiterLookahead) } }
     
     // Saturation
     @Published var satDrive: Double = 0 { didSet { setParam(satDriveParam, satDrive) } }
@@ -107,6 +112,9 @@ class AudioUnitViewModel: ObservableObject {
     private var compAttackParam: AUParameter?
     private var compReleaseParam: AUParameter?
     private var compMakeupParam: AUParameter?
+    private var compAutoMakeupParam: AUParameter?
+    private var limiterCeilingParam: AUParameter?
+    private var limiterLookaheadParam: AUParameter?
     private var satDriveParam: AUParameter?
     private var satTypeParam: AUParameter?
     private var delayTimeParam: AUParameter?
@@ -177,6 +185,10 @@ class AudioUnitViewModel: ObservableObject {
         compAttackParam = bind("compAttack"); compAttack = Double(compAttackParam?.value ?? 0.4)
         compReleaseParam = bind("compRelease"); compRelease = Double(compReleaseParam?.value ?? 100)
         compMakeupParam = bind("compMakeup"); compMakeup = Double(compMakeupParam?.value ?? 0)
+        compAutoMakeupParam = bind("compAutoMakeup"); compAutoMakeup = (Double(compAutoMakeupParam?.value ?? 0) > 0.5)
+        
+        limiterCeilingParam = bind("limiterCeiling"); limiterCeiling = Double(limiterCeilingParam?.value ?? -0.1)
+        limiterLookaheadParam = bind("limiterLookahead"); limiterLookahead = Double(limiterLookaheadParam?.value ?? 2.0)
         
         satDriveParam = bind("satDrive"); satDrive = Double(satDriveParam?.value ?? 0)
         satTypeParam = bind("satType"); satType = Double(satTypeParam?.value ?? 0)
@@ -246,6 +258,9 @@ class AudioUnitViewModel: ObservableObject {
         else if address == compAttackParam?.address { compAttack = Double(value) }
         else if address == compReleaseParam?.address { compRelease = Double(value) }
         else if address == compMakeupParam?.address { compMakeup = Double(value) }
+        else if address == compAutoMakeupParam?.address { compAutoMakeup = (value > 0.5) }
+        else if address == limiterCeilingParam?.address { limiterCeiling = Double(value) }
+        else if address == limiterLookaheadParam?.address { limiterLookahead = Double(value) }
         // Sat
         else if address == satDriveParam?.address { satDrive = Double(value) }
         else if address == satTypeParam?.address { satType = Double(value) }

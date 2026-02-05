@@ -29,6 +29,7 @@ typedef NS_ENUM(AUParameterAddress, AIVParameterAddress) {
   AIVParameterAddressCompAttack = 15,
   AIVParameterAddressCompRelease = 16,
   AIVParameterAddressCompMakeup = 17,
+  // CompAutoMakeup is 62
 
   AIVParameterAddressSatDrive = 18,
   AIVParameterAddressSatType = 19,
@@ -50,7 +51,6 @@ typedef NS_ENUM(AUParameterAddress, AIVParameterAddress) {
   AIVParameterAddressDeesserRatio = 31,
   AIVParameterAddressDeesserRange = 32,
 
-  // Gate
   AIVParameterAddressGateThresh = 40,
   AIVParameterAddressGateRange = 41,
   AIVParameterAddressGateAttack = 42,
@@ -63,7 +63,12 @@ typedef NS_ENUM(AUParameterAddress, AIVParameterAddress) {
 
   AIVParameterAddressInputGain = 34,
   AIVParameterAddressSaturation = 35,
-  AIVParameterAddressPhaseInvert = 36
+  AIVParameterAddressPhaseInvert = 36,
+
+  // Safety Features
+  AIVParameterAddressLimiterCeiling = 60,
+  AIVParameterAddressLimiterLookahead = 61,
+  AIVParameterAddressCompAutoMakeup = 62
 };
 
 @class AIVDemoViewController;

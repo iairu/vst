@@ -59,6 +59,10 @@ class AIVDemoParameters {
 
         case cutoff = 50
         case resonance = 51
+        
+        case limiterCeiling = 60
+        case limiterLookahead = 61
+        case compAutoMakeup = 62
     }
 
     // Parameters
@@ -92,6 +96,13 @@ class AIVDemoParameters {
     var compAttackParam: AUParameter!
     var compReleaseParam: AUParameter!
     var compMakeupParam: AUParameter!
+    var compAutoMakeupParam: AUParameter!
+    
+    // Limiter
+    var limiterCeilingParam: AUParameter!
+    var limiterLookaheadParam: AUParameter!
+    
+
     
     // Saturation
     var satDriveParam: AUParameter!
@@ -202,6 +213,17 @@ class AIVDemoParameters {
         
         compMakeupParam = AUParameterTree.createParameter(withIdentifier: "compMakeup", name: "Makeup", address: AIVParam.compMakeup.rawValue, min: 0.0, max: 24.0, unit: .decibels, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
         
+        compAutoMakeupParam = AUParameterTree.createParameter(withIdentifier: "compAutoMakeup", name: "Auto Makeup", address: AIVParam.compAutoMakeup.rawValue, min: 0.0, max: 1.0, unit: .boolean, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        
+        // Limiter
+        limiterCeilingParam = AUParameterTree.createParameter(withIdentifier: "limiterCeiling", name: "Ceiling", address: AIVParam.limiterCeiling.rawValue, min: -6.0, max: 0.0, unit: .decibels, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        limiterCeilingParam.value = -0.1
+        
+        limiterLookaheadParam = AUParameterTree.createParameter(withIdentifier: "limiterLookahead", name: "Lookahead", address: AIVParam.limiterLookahead.rawValue, min: 0.1, max: 5.0, unit: .milliseconds, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        limiterLookaheadParam.value = 2.0
+        
+
+        
         // Saturation
         satDriveParam = AUParameterTree.createParameter(withIdentifier: "satDrive", name: "Drive", address: AIVParam.satDrive.rawValue, min: 0.0, max: 100.0, unit: .percent, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
         
@@ -281,7 +303,9 @@ class AIVDemoParameters {
             eqBand1FreqParam, eqBand1GainParam, eqBand1QParam,
             eqBand2FreqParam, eqBand2GainParam, eqBand2QParam,
             eqBand3FreqParam, eqBand3GainParam, eqBand3QParam,
-            compInputParam, compRatioParam, compAttackParam, compReleaseParam, compMakeupParam,
+            compInputParam, compRatioParam, compAttackParam, compReleaseParam, compMakeupParam, compAutoMakeupParam,
+            limiterCeilingParam, limiterLookaheadParam,
+
             satDriveParam, satTypeParam,
             delayTimeParam, delayFeedbackParam, delayMixParam,
             reverbSizeParam, reverbDampParam, reverbMixParam,
