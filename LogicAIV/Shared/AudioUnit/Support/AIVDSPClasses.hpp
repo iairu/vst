@@ -1005,3 +1005,171 @@ private:
   float dampCoef = 0.0f;
   float mix = 0.0f;
 };
+
+// --- Oversampler (4x Linear Phase FIR) ---
+class Oversampler {
+public:
+  Oversampler() { reset(); }
+
+  void initialize() {
+    generateCoeffs();
+    reset();
+  }
+
+  void reset() {
+    std::fill(upBuffer.begin(), upBuffer.end(), 0.0f);
+    std::fill(downBuffer.begin(), downBuffer.end(), 0.0f);
+    upMbIndex = 0;
+    downMbIndex = 0;
+  }
+
+  // Upsample: 1 input -> 4 outputs
+  // Writes 4 samples to 'output' array
+  void processUpsample(float input, float *output) {
+    // 1. Insert input into circular buffer (Zero Stuffing logic implicit in
+    // polyphase) Standard FIR: Upsampling means inserting 3 zeros between
+    // samples. The LowPass filter is applied to this sparse stream. Polyphase
+    // efficient method: output[0] = input * h[0] + hist[0]*h[4] + ... output[1]
+    // = input * h[1] + hist[0]*h[5] + ... But here we use a simple sliding
+    // window for robustness.
+
+    // Push input
+    upBuffer[upMbIndex] = input;
+
+    // Convolve for 4 phases
+    // Phase p (0..3): corresponds to fractional delay
+    // We need to maintain state. The buffer stores *input* samples (at 1x
+    // rate). Each output sample is a dot product of the input buffer and a
+    // subset of coeffs.
+
+    // Coeff index mapping for 4x upsampling:
+    // h has length 64.
+    // y[0] = sum(x[n-k] * h[4k])
+    // y[1] = sum(x[n-k] * h[4k + 1])
+    // ...
+
+    int bufSize = (int)upBuffer.size();
+
+    for (int phase = 0; phase < 4; ++phase) {
+      double sum = 0.0;
+      // Dot product
+      int tapIndex = phase;
+      // We iterate taps with stride 4
+      // x[n] is at mbIndex. x[n-1] is at mbIndex-1...
+
+      for (int k = 0; k < 16; ++k) { // 64 taps / 4 = 16 taps per phase
+        int bufIdx = upMbIndex - k;
+        if (bufIdx < 0)
+          bufIdx += bufSize;
+
+        sum += upBuffer[bufIdx] * coeffs[tapIndex];
+        tapIndex += 4;
+      }
+      // Gain correction for upsampling (x4 energy loss in zero stuffing)
+      // Ideally filter has gain 4.0. We normalize coeffs to unity sum, so
+      // multiply by 4.
+      output[phase] = (float)(sum * 4.0);
+    }
+
+    // Advance buffer
+    upMbIndex++;
+    if (upMbIndex >= bufSize)
+      upMbIndex = 0;
+  }
+
+  // Downsample: 4 inputs -> 1 output
+  float processDownsample(const float *input) {
+    // Push 4 samples into downsample buffer
+    // Then apply LPF and take every 4th sample (Decimate)
+    // Optimization: We only need to compute 1 output sample for every 4 inputs.
+    // So we only compute the convolution when we align.
+
+    // Robust Implementation:
+    // Treat as sliding buffer. Push 4. Compute 1 dot product.
+
+    int bufSize = (int)downBuffer.size();
+
+    for (int i = 0; i < 4; ++i) {
+      downBuffer[downMbIndex] = input[i];
+      downMbIndex++;
+      if (downMbIndex >= bufSize)
+        downMbIndex = 0;
+    }
+
+    // Compute Convolution at current point
+    // Using all 64 taps on the high-rate buffer.
+    double sum = 0.0;
+    int readIdx = downMbIndex - 1; // Latest sample
+
+    for (int k = 0; k < 64; ++k) {
+      if (readIdx < 0)
+        readIdx += bufSize;
+      sum += downBuffer[readIdx] * coeffs[k];
+      readIdx--;
+    }
+
+    return (float)sum;
+  }
+
+  int getLatency() {
+    // Linear Phase Latency = Taps / 2.
+    // Upsampler: 64 taps (at 4x rate) -> latency is 32 samples at 4x rate = 8
+    // samples at 1x rate. Downsampler: 64 taps (at 4x rate) -> latency is 32
+    // samples at 4x rate = 8 samples at 1x rate. Total RTT latency = 16 samples
+    // at 1x rate.
+    return 16;
+  }
+
+private:
+  void generateCoeffs() {
+    // Windowed Sinc
+    // Cutoff = 0.25 (Nyquist/4).
+    // Length = 64. Center = 31.5.
+    // But for delay integer alignment, let's prefer odd length?
+    // 64 is fine for polyphase.
+
+    double fc = 0.25;
+    int N = 64;
+
+    for (int i = 0; i < N; ++i) {
+      double n = i - (N - 1.0) / 2.0;
+      // Sinc
+      double h = 0.0;
+      if (fabs(n) < 1e-9) {
+        h = 2.0 * kPi * fc;
+      } else {
+        h = sin(2.0 * kPi * fc * n) / (kPi * n);
+      }
+      // Normalized Sinc (sin(pi*x)/(pi*x)) uses fc in [0, 0.5]?
+      // Formula: 2*fc * sinc(2*fc*n)?
+      // Let's use standard: sin(2*pi*fc*n) / (pi*n) is correct for fc in [0,
+      // 0.5].
+
+      // Blackman Window
+      double w = 0.42 - 0.5 * cos(2.0 * kPi * i / (N - 1)) +
+                 0.08 * cos(4.0 * kPi * i / (N - 1));
+      coeffs[i] = h * w;
+    }
+
+    // Normalize gain to 1.0 (at DC)
+    double sum = 0.0;
+    for (double c : coeffs)
+      sum += c;
+    for (double &c : coeffs)
+      c /= sum;
+  }
+
+  // Buffers and State
+  // Upsampler: Input buffer (at 1x rate) needs to store enough for 'taps/4'
+  // history. 64/4 = 16. Size 16 is enough. Let's make it 32 for safety.
+  std::vector<float> upBuffer = std::vector<float>(32, 0.0f);
+  int upMbIndex = 0;
+
+  // Downsampler: Input buffer (at 4x rate) needs to store 64 samples. Make it
+  // 128.
+  std::vector<float> downBuffer = std::vector<float>(128, 0.0f);
+  int downMbIndex = 0;
+
+  // Coeffs
+  std::vector<double> coeffs = std::vector<double>(64, 0.0);
+};

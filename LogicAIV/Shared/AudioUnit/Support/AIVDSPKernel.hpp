@@ -43,6 +43,11 @@ public:
     mSaturator.resize(mChannelCount);
     mDelay.resize(mChannelCount);
     mReverb.resize(mChannelCount);
+    mOversampler.resize(mChannelCount);
+    mLimiter.resize(mChannelCount);
+
+    for (auto &os : mOversampler)
+      os.initialize();
 
     updateAutoLevel();
     updateGate();
@@ -51,6 +56,7 @@ public:
     updateComp();
     updateDelay();
     updateReverb();
+    updateLimiter();
   }
 
   void deInitialize() {}
@@ -126,7 +132,7 @@ public:
     case AIVParameterAddressPitchAmount:
       mPitchAmount = value;
       for (auto &p : mPitch)
-        p.setParameters(mPitchAmount, mSampleRate);
+        p.setParameters(mPitchAmount, mSampleRate * 4.0);
       break;
     case AIVParameterAddressPitchSpeed:
       mPitchSpeed = value;
@@ -302,6 +308,11 @@ public:
     case AIVParameterAddressCompMakeup:
       return mCompMakeup;
 
+    case AIVParameterAddressLimiterCeiling:
+      return mLimiterCeiling;
+    case AIVParameterAddressLimiterLookahead:
+      return mLimiterLookahead;
+
     case AIVParameterAddressSatDrive:
       return mSatDrive;
     case AIVParameterAddressSatType:
@@ -368,94 +379,67 @@ public:
       for (UInt32 frameIndex = 0; frameIndex < frameCount; ++frameIndex) {
         float sample = in[frameIndex];
 
-        // 0. Preamp & Saturation (Step 1.1)
-        /*
-         Research Note (Section 2.1):
-         To model the "warmth" associated with transformer-based preamps, we
-         utilize a continuous, non-linear transfer function. A common mistake is
-         using hard clipping.
+        // --- UPSAMPLE (1 -> 4) ---
+        float osBlock[4];
+        mOversampler[channel].processUpsample(sample, osBlock);
 
-         Correct Formula: Hyperbolic Tangent (Soft Saturation)
-         f(x) = tanh(k * x) / tanh(k)
-         Where k is the drive coefficient derived from the Input Gain. As x
-         increases, predominantly odd-order harmonics (3rd, 5th, 7th) are
-         generated.
-         */
-        float inputSample = sample;
+        float processedBlock[4];
 
-        // Research Note (Section 1.1):
-        // Correct Decibel Formula: 20 * log10(V / Vref)
-        // We convert the dB parameter to linear voltage ratio here.
-        float linearSample = inputSample * mInputGainLin;
+        // --- CORE PROCESS LOOP (4x) ---
+        for (int k = 0; k < 4; ++k) {
+          float s = osBlock[k];
 
-        // Physics: y = tanh(k * x) / tanh(k)
-        // k is derived from input gain.
-        // We use linearSample as 'x' logic for Drive, but use formula for
-        // Shape. Actually, if k=gain, then tanh(k * x_raw) / tanh(k) is the
-        // formula. Let's use the robust blend interpretation:
+          // 0. Preamp & Saturation (Step 1.1) - Now running at 4x
+          /*
+           Physics: y = tanh(k * x) / tanh(k)
+           Ideally Preamp saturation benefits most from OS.
+           */
+          float inputSample = s;
+          float linearSample = inputSample * mInputGainLin;
 
-        // Wet Path (Saturated/Limited)
-        // Protect against k=0 (though min gain is usually handled)
-        float k = (mInputGainLin < 0.01f) ? 0.01f : mInputGainLin;
-        float wetSample = std::tanh(k * inputSample) / std::tanh(k);
+          float k_val = (mInputGainLin < 0.01f) ? 0.01f : mInputGainLin;
+          float wetSample = std::tanh(k_val * inputSample) / std::tanh(k_val);
 
-        // Dry Path (Amplified Linear)
-        float drySample = linearSample;
+          float drySample = linearSample;
+          float mix = mSaturation / 100.0f;
+          s = (1.0f - mix) * drySample + mix * wetSample;
 
-        // Mix: Saturation 0% = Dry (Amplified), 100% = Wet (Limited/Saturated)
-        float mix = mSaturation / 100.0f;
-        sample = (1.0f - mix) * drySample + mix * wetSample;
+          // Phase Invert
+          if (mPhaseInvert) {
+            s = -s;
+          }
 
-        // Phase Invert
-        if (mPhaseInvert) {
-          sample = -sample;
+          // 0b. Noise Gate
+          s = mGate[channel].process(s);
+
+          // 1. Auto Level
+          s = mAutoLevel[channel].process(s);
+
+          // 2. Pitch
+          s = mPitch[channel].process(s);
+
+          // 2. Deesser
+          s = mDeesser[channel].process(s);
+
+          // 3. EQ
+          s = mSafetyHPF[channel].process(s);
+          s = mHPF[channel].process(s);
+          s = mLowMidCut[channel].process(s);
+          s = mEQBand3[channel].process(s);
+
+          // 3. Compressor (FET / AIV 76)
+          s = mCompressor[channel].process(s);
+
+          // 4. Saturator (Module)
+          s = mSaturator[channel].process(s);
+
+          processedBlock[k] = s;
         }
 
-        // 0b. Noise Gate (Prompt 2.1)
-        /*
-          Research Note (Section 3):
-          Gate uses Hysteresis (Dual Thresholds) to prevent chatter.
-          Open Thresh = User Param. Close Thresh = Open - Hysteresis.
-        */
-        sample = mGate[channel].process(sample);
+        // --- DOWNSAMPLE (4 -> 1) ---
+        sample = mOversampler[channel].processDownsample(processedBlock);
 
-        // 1. Auto Level
-        sample = mAutoLevel[channel].process(sample);
-
-        // 2. Pitch
-        sample = mPitch[channel].process(sample);
-
-        // 2. Deesser
-        sample = mDeesser[channel].process(sample);
-
-        // 3. EQ (ZDF + Biquad)
-        /*
-         Research Note (Section 4.1):
-         Standard Biquads suffer from amplitude and phase distortion (cramping)
-         near Nyquist. We use Zero Delay Feedback (TPT) topology with
-         Trapezoidal Integration. g = tan(pi * fc / fs) This preserves the
-         analog amplitude and phase response perfectly.
-         */
-        // Safety HPF (Fixed 20Hz)
-        sample = mSafetyHPF[channel].process(sample);
-        // Band 1: HPF (ZDF)
-        sample = mHPF[channel].process(sample);
-        // Band 2: Low Mid Cut (ZDF Peaking)
-        sample = mLowMidCut[channel].process(sample);
-        // Band 3: High Shelf (Biquad)
-        sample = mEQBand3[channel].process(sample);
-
-        // 3. Compressor (FET / AIV 76)
-        /*
-         Research Note (Section 6.1):
-         FET Compressor uses a Fixed Threshold. The user drives the signal
-         *into* the threshold. Attack time is defined as time to reach 63.2% of
-         reduction. 1176 attack is microsecond scale.
-         */
-        sample = mCompressor[channel].process(sample);
-
-        // 4. Saturation
-        sample = mSaturator[channel].process(sample);
+        // --- POST PROCESS (1x) ---
 
         // 5. Delay
         sample = mDelay[channel].process(sample);
@@ -463,7 +447,12 @@ public:
         // 6. Reverb
         sample = mReverb[channel].process(sample);
 
-        // 7. Global Gain
+        // 7. Limiter (TruePeak - 1x is fine as it implements its own
+        // lookahead/ISP check logic if robust, or just relies on previous OS
+        // being clean)
+        sample = mLimiter[channel].process(sample);
+
+        // 8. Global Gain
         out[frameIndex] = sample * mGain;
       }
     }
@@ -485,47 +474,67 @@ public:
     setParameter(parameterEvent.parameterAddress, parameterEvent.value);
   }
 
+  // Latency Report (4x Oversampling + Limiter Lookahead)
+  double getLatency() {
+    // Oversampler Latency (16 samples at 1x)
+    double osLatency = 0.0;
+    if (!mOversampler.empty())
+      osLatency = mOversampler[0].getLatency();
+
+    // Limiter Lookahead (Seconds converted to samples)
+    // Actually limiter has fixed delay buffer?
+    // check TruePeakLimiter implementation: uses lookaheadDelay samples.
+    // But lookahead is a parameter.
+    // So we report max possible? Or current?
+    // Host latency property usually static or changes trigger restart.
+    // Let's report current.
+    double limLatency = 0.0; // Handled by limiter class? No getter yet.
+    // We know mLimiterLookahead is ms.
+    // latency = ms * fs / 1000.
+    double limSamples = mLimiterLookahead / 1000.0 * mSampleRate;
+
+    return osLatency + limSamples;
+  }
+
 private:
   void updateAutoLevel() {
     for (auto &al : mAutoLevel)
       al.setParameters(mAutoLevelTarget, mAutoLevelRange, mAutoLevelSpeed,
-                       mSampleRate);
+                       mSampleRate * 4.0);
   }
 
   void updateGate() {
     for (auto &g : mGate)
       g.setParameters(mGateThresh, mGateRange, mGateAttack, mGateHold,
-                      mGateRelease, mGateHysteresis, mSampleRate);
+                      mGateRelease, mGateHysteresis, mSampleRate * 4.0);
   }
 
   void updateDeesser() {
     for (auto &ds : mDeesser)
       ds.setParameters(mDeesserThresh, mDeesserFreq, mDeesserRange,
-                       mDeesserRatio, mSampleRate);
+                       mDeesserRatio, mSampleRate * 4.0);
   }
 
   void updateEQ() {
     // Safety HPF: 20Hz, Q=0.707
     for (auto &eq : mSafetyHPF)
-      eq.setParameters(ZDFFilter::HighPass, 20.0, 0.707, 0.0, mSampleRate);
+      eq.setParameters(ZDFFilter::HighPass, 20.0, 0.707, 0.0,
+                       mSampleRate * 4.0);
 
     // Band 1: Main HPF (User controls Freq)
-    // Q fixed at 0.707 or user? Prompt says 12dB/oct, implied Q=0.707
-    // (Butterworth)
     for (auto &eq : mHPF)
       eq.setParameters(ZDFFilter::HighPass, mEQ1Freq, 0.707, 0.0,
-                       mSampleRate); // Gain irrelevant for HPF
+                       mSampleRate * 4.0);
 
     // Band 2: Low Mid Cut (Peaking)
-    // "Low-Mid Gain ... -12 dB to 0 dB"
     for (auto &eq : mLowMidCut)
       eq.setParameters(ZDFFilter::Peaking, mEQ2Freq, mEQ2Q, mEQ2Gain,
-                       mSampleRate);
+                       mSampleRate * 4.0);
 
     // Band 3: High Shelf (Standard Biquad)
     for (auto &eq : mEQBand3)
       eq.calculateCoefficients(BiquadFilter::HighShelf, mEQ3Freq, mEQ3Q,
-                               mEQ3Gain, mSampleRate);
+                               mEQ3Gain, mSampleRate * 4.0);
   }
 
   void updateComp() {
@@ -536,7 +545,7 @@ private:
       // mapping in this file too. Wait, mCompThresh is just a float storage. I
       // will use it as Input Drive.
       c.setParameters(mCompThresh, mCompRatio, mCompAttack, mCompRelease,
-                      mCompMakeup, mSampleRate);
+                      mCompMakeup, mSampleRate * 4.0);
   }
 
   void updateDelay() {
@@ -547,6 +556,12 @@ private:
   void updateReverb() {
     for (auto &r : mReverb)
       r.setParameters(mReverbSize, mReverbDamp, mReverbMix, mSampleRate);
+  }
+
+  void updateLimiter() {
+    for (auto &l : mLimiter)
+      l.setParameters(mLimiterCeiling, mLimiterLookahead, 100.0,
+                      mSampleRate); // Fixed 100ms release
   }
 
   void updatePreamp() { mInputGainLin = std::pow(10.0f, mInputGainDb / 20.0f); }
@@ -580,6 +595,8 @@ private:
   std::vector<Saturator> mSaturator;
   std::vector<DelayLine> mDelay;
   std::vector<FDNReverb> mReverb;
+  std::vector<Oversampler> mOversampler;
+  std::vector<TruePeakLimiter> mLimiter;
 
   // Parameter State Cache
   float mPitchAmount = 0;
@@ -605,4 +622,5 @@ private:
   float mDelayTime = 0.5, mDelayFeedback = 20, mDelayMix = 0;
 
   float mReverbSize = 0.5f, mReverbDamp = 0.5f, mReverbMix = 0.0f;
+  float mLimiterCeiling = -0.1f, mLimiterLookahead = 2.0f;
 };
