@@ -143,20 +143,50 @@ DSP code.
     }
 
     // Bridge AudioBufferList to std::vector or raw pointers for C++ kernel
-    int channelCount = inAudioBufferList->mNumberBuffers;
-    float *inputChannels[channelCount];
-    float *outputChannels[channelCount];
+    int inputChannelCount =
+        inAudioBufferList
+            ->mNumberBuffers; // Should be 2 (Planar) via BufferedBus
+    int outputBufferCount = outAudioBufferList->mNumberBuffers;
 
-    for (int i = 0; i < channelCount; ++i) {
+    float *inputChannels[inputChannelCount];
+    float *outputChannels[2]; // Max 2 channels for this plugin
+
+    for (int i = 0; i < inputChannelCount; ++i) {
       inputChannels[i] = (float *)inAudioBufferList->mBuffers[i].mData;
-      outputChannels[i] = (float *)outAudioBufferList->mBuffers[i].mData;
     }
 
-    // Pass as spans (using simple pointer + size construction if std::span is
-    // missing, or vector) Since we removed std::span dependency in planning, we
-    // will call a method accepting raw pointers
+    bool outputIsInterleaved =
+        (outputBufferCount == 1 &&
+         outAudioBufferList->mBuffers[0].mNumberChannels == 2);
+
+    // Assign Output Pointers
+    if (outputIsInterleaved) {
+      // Use scratch planar buffers from Kernel
+      outputChannels[0] = state->getScratchPointer(0);
+      outputChannels[1] = state->getScratchPointer(1);
+    } else {
+      // Standard Planar
+      for (int i = 0; i < outputBufferCount; ++i) {
+        outputChannels[i] = (float *)outAudioBufferList->mBuffers[i].mData;
+      }
+    }
+
+    // Process (Planar inputs -> Planar outputs (scratch or direct))
     state->process(inputChannels, outputChannels, timestamp->mSampleTime,
-                   frameCount, channelCount);
+                   frameCount,
+                   inputChannelCount); // Use input channel count (2)
+
+    // Handle Interleaved Output (mix planar scratch back to interleaved output)
+    if (outputIsInterleaved) {
+      float *interleavedOut = (float *)outAudioBufferList->mBuffers[0].mData;
+      float *l = outputChannels[0];
+      float *r = outputChannels[1];
+
+      for (int i = 0; i < frameCount; ++i) {
+        interleavedOut[2 * i] = l[i];
+        interleavedOut[2 * i + 1] = r[i];
+      }
+    }
 
     return noErr;
   };

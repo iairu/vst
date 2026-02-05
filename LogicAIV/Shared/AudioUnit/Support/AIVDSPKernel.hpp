@@ -61,6 +61,16 @@ public:
     updateDelay();
     updateReverb();
     updateLimiter();
+
+    // Resize scratch buffer for Interleaved handling (Stereo)
+    // Max frames typically 1024, but allow for host resizing
+    mScratchBuffer.resize(mMaxFramesToRender * 2);
+  }
+
+  float *getScratchPointer(int channel) {
+    if (channel < 0 || channel > 1)
+      return nullptr;
+    return mScratchBuffer.data() + (channel * mMaxFramesToRender);
   }
 
   void deInitialize() {}
@@ -405,6 +415,7 @@ public:
 
   void setMaximumFramesToRender(const AUAudioFrameCount &maxFrames) {
     mMaxFramesToRender = maxFrames;
+    mScratchBuffer.resize(mMaxFramesToRender * 2);
   }
 
   // MARK: - Musical Context
@@ -709,4 +720,6 @@ private:
 
   float mCutoff = 20000.0f;
   float mResonance = 0.0f;
+
+  std::vector<float> mScratchBuffer;
 };
