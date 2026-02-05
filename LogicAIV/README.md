@@ -1,314 +1,145 @@
-# Creating Custom Audio Effects
-Add custom audio effect processing to apps like Logic Pro X and GarageBand by creating Audio Unit (AU) plug-ins.
+# AIV Vocal Chain
 
-## Overview
-This sample app shows you how to create a custom audio effect plug-in using the latest Audio Unit standard (AUv3). The AUv3 standard builds on the [App Extensions][1] model, which means you deliver your plug-in as an extension that’s contained in an app distributed through the App Store or your own store.
+AIV (Artificial Intelligence Vocal) Chain is a comprehensive Logic Pro AudioUnit extension designed to deliver professional-grade vocal processing. It combines a suite of essential audio effects into a single, high-performance C++ DSP kernel with a modern, hardware-accelerated SwiftUI interface.
 
-The sample Audio Unit is a low-pass filter that allows frequencies at or below the cutoff frequency to pass through to the output. It attenuates frequencies above this point. It also lets you change the filter’s resonance, which boosts or attenuates a narrow band of frequencies around the cutoff point. You set these values by moving the draggable point around the plug-in’s user interface as shown in the figure below.
+This plugin allows users to transform raw vocal recordings into polished, radio-ready tracks using a specific chain of processing modules: Auto Level, Pitch Correction, De-esser, EQ, Compression, Saturation, Filtering, Delay, and Reverb.
 
-![plug-in User Interface][image-1]
+## Signal Flow
 
-The project has targets for both iOS and macOS. Each platform’s main app target has two supporting targets: `AIVExtension`, which contains the plug-in packaged as an Audio Unit extension, and `AIVFramework`, which bundles the plug-in’s code and resources.
+The audio signal passes through the modules in the following order:
 
-- Note: See [Incorporating Audio Effects and Instruments][2] for details on how you can use this Audio Unit extension in a host app.
+`Input` → `Auto Level` → `Pitch Correction` → `De-esser` → `Equalizer` → `Compressor` → `Saturation` → `Filter` → `Delay` → `Reverb` → `Output`
 
-## Create a Custom Audio Effect Plug-In
+---
 
-The extension itself contains two primary pieces: an Audio Unit proper and a factory object that creates it.
+## Features & DSP Physics
 
-The sample app's Audio Unit is `AIVDemo`. This is a Swift class that subclasses [AUAudioUnit][3] and defines the plug-in’s interface, including key features like its parameters, presets, and I/O busses. A class called `AIVDSPKernel` provides the plug-in’s digital signal processing (DSP) logic, and is written in C++ to ensure real-time safety. Because Swift can’t talk directly to C++, the sample project also includes an Objective-C++ adapter class called `AIVDSPKernelAdapter` to act as an intermediary.
+Each module in the AIV Vocal Chain is built upon fundamental Digital Signal Processing (DSP) principles. Below is an explanation of each feature alongside the governing physics and mathematical equations.
 
-`AIVDemoViewController` is the Audio Unit’s main view controller. It adopts the [AUAudioUnitFactory][4] protocol and is responsible for creating new instances of your plug-in. You implement the protocol’s [createAudioUnit(with:)][5] factory method to return a new instance of `AIVDemo` when a host app requests it.
+### 1. Auto Level (Automatic Gain Control)
+**Function**: Smooths out dynamic inconsistencies in the vocal performance before it hits the rest of the chain, ensuring a consistent input level.
+**Controls**: Target (dB), Range (dB), Speed (0-100%).
 
-``` swift
-extension AIVDemoViewController: AUAudioUnitFactory {
-    public func createAudioUnit(with componentDescription: AudioComponentDescription) throws -> AUAudioUnit {
-        audioUnit = try AIVDemo(componentDescription: componentDescription, options: [])
-        return audioUnit!
-    }
-}
-```
+**Physics/Math**:
+The Auto Leveler uses an RMS (Root Mean Square) detector to estimate signal power and apply gain. The envelope detection is modeled by a first-order low-pass filter:
 
-- Important: To ensure glitch-free performance, your plug-in’s audio processing must occur in a real-time safe context. Don’t allocate memory, perform file I/O, take locks, or interact with the Swift or Objective-C runtimes when rendering audio.
+$$ y_{env}[n] = \alpha \cdot |x[n]| + (1 - \alpha) \cdot y_{env}[n-1] $$
 
-## Add Custom Parameters to Your Audio Unit
-In most Audio Units, you’ll provide one or more parameters to configure the audio processing. Your Audio Unit arranges its parameters into a tree structure, provided by an instance of [AUParameterTree][6]. This object represents the root node of the plug-in’s tree of parameters and parameter groupings.
+Where $\alpha$ is determined by the `Speed` parameter. The gain applied $g[n]$ is calculated to bring $y_{env}$ towards the `Target` level $L_T$:
 
-`AIVDemo` has parameters to control the filter’s cutoff frequency and resonance. You create its parameters using a factory method on `AUParameterTree`.
+$$ g[n] = \left(\frac{10^{L_T/20}}{y_{env}[n]}\right)^k $$
 
-``` swift
-private enum AIVParam: AUParameterAddress {
-    case cutoff, resonance
-}
+Where $k$ is a scaling factor derived from the `Range`.
 
-/// Parameter to control the cutoff frequency (12Hz - 20kHz).
-var cutoffParam: AUParameter = {
-    let parameter =
-        AUParameterTree.createParameter(withIdentifier: "cutoff",
-                                        name: "Cutoff",
-                                        address: AIVParam.cutoff.rawValue,
-                                        min: 12.0,
-                                        max: 20_000.0,
-                                        unit: .hertz,
-                                        unitName: nil,
-                                        flags: [.flag_IsReadable,
-                                                .flag_IsWritable,
-                                                .flag_CanRamp],
-                                        valueStrings: nil,
-                                        dependentParameters: nil)
-    // Set default value
-    parameter.value = 0.0
+### 2. Pitch Correction
+**Function**: Corrects the pitch of the vocal to the nearest chromatic semitone.
+**Controls**: Amount (%), Speed (%).
 
-    return parameter
-}()
+**Physics/Math**:
+Pitch detection is typically performed using autocorrelation or zero-crossing analysis to find the fundamental frequency $f_0$. The target frequency $f_{target}$ is the nearest note in the 12-tone equal temperament scale:
 
-/// Parameter to control the cutoff frequency's resonance (+/-20dB).
-var resonanceParam: AUParameter = {
-    let parameter =
-        AUParameterTree.createParameter(withIdentifier: "resonance",
-                                        name: "Resonance",
-                                        address: AIVParam.resonance.rawValue,
-                                        min: -20.0,
-                                        max: 20.0,
-                                        unit: .decibels,
-                                        unitName: nil,
-                                        flags: [.flag_IsReadable,
-                                                .flag_IsWritable,
-                                                .flag_CanRamp],
-                                        valueStrings: nil,
-                                        dependentParameters: nil)
-    // Set default value
-    parameter.value = 20_000.0
+$$ f_{note} = 440 \cdot 2^{(n-69)/12} $$
 
-    return parameter
-}()
-```
+The correction shifts the input signal using a time-domain pitch shifting algorithm (like PSOLA) or a circular buffer delay line where the read pointer speed varies relative to the write pointer:
 
-The cutoff parameter defines a frequency range between 12Hz and 20kHz, and the resonance parameter defines a decibel range between -20dB and 20dB. Each parameter is readable and writeable, and also supports ramping, which means you can modify its value over time.
+$$ y[t] = x[t \cdot \frac{f_{target}}{f_{measured}}] $$
 
-You arrange the parameters into a tree by creating an `AUParameterTree` instance and setting them as the tree’s children.
+### 3. De-esser
+**Function**: Attenuates harsh sibilance ("s", "sh", "ch" sounds) in the high frequencies.
+**Controls**: Threshold (dB), Frequency (Hz), Ratio.
 
-``` swift
-// Create the audio unit's tree of parameters
-parameterTree = AUParameterTree.createTree(withChildren: [cutoffParam,
-                                                          resonanceParam])
-```
+**Physics/Math**:
+The De-esser is a frequency-dependent compressor. The control signal is generated by a high-pass filter (sidechain):
 
-Next, you bind handlers to the parameter tree’s readable and writeable values by installing closures for its [implementorValueObserver][7], [implementorValueProvider][8], and [implementorStringFromValueCallback][9] properties. These closures delegate to the filter adapter instance, which in turn communicates with the underlying DSP logic.
+$$ H(z) = \frac{1 - z^{-1}}{1 - p \cdot z^{-1}} $$
 
-``` swift
-// Closure observing all externally-generated parameter value changes.
-parameterTree.implementorValueObserver = { param, value in
-    kernelAdapter.setParameter(param, value: value)
-}
+When the energy in this filtered band exceeds the `Threshold`, gain reduction is applied to the broadband signal:
 
-// Closure returning state of requested parameter.
-parameterTree.implementorValueProvider = { param in
-    return kernelAdapter.value(for: param)
-}
+$$ G_{dB} = \text{Ratio} \cdot (\text{Input}_{dB} - \text{Threshold}_{dB}) $$
 
-// Closure returning string representation of requested parameter value.
-parameterTree.implementorStringFromValueCallback = { param, value in
-    switch param.address {
-    case AIVParam.cutoff.rawValue:
-        return String(format: "%.f", value ?? param.value)
-    case AIVParam.resonance.rawValue:
-        return String(format: "%.2f", value ?? param.value)
-    default:
-        return "?"
-    }
-}
-```
+### 4. Parametric Equalizer (EQ)
+**Function**: Sculpts the tonal balance with 3 bands (Low, Mid, High).
+**Controls**: Frequency (Hz), Gain (dB), Q (Bandwidth).
 
-## Connect the Parameters to Your User Interface
-The sample app’s iOS and macOS targets each provide a platform-specific user interface. You use a shared view controller called `AIVDemoViewController` to coordinate the communication between the user interface and the Audio Unit. Connect your user interface to the Audio Unit’s parameters in the `connectViewToAU()` method.
+**Physics/Math**:
+Each band is implemented as a second-order IIR (Infinite Impulse Response) Biquad filter. The transfer function in the z-domain is:
 
-``` swift
-private func connectViewToAU() {
-    guard needsConnection, let paramTree = audioUnit?.parameterTree else { return }
+$$ H(z) = \frac{b_0 + b_1 z^{-1} + b_2 z^{-2}}{a_0 + a_1 z^{-1} + a_2 z^{-2}} $$
 
-    // Find the cutoff and resonance parameters in the parameter tree.
-    guard let cutoff = paramTree.value(forKey: "cutoff") as? AUParameter,
-        let resonance = paramTree.value(forKey: "resonance") as? AUParameter else {
-            fatalError("Required AU parameters not found.")
-    }
+For a peaking EQ filter, the coefficients ($a_n, b_n$) are calculated based on center frequency $\omega_0 = 2\pi f_c / f_s$ and quality factor $Q$:
 
-    // Set the instance variables.
-    cutoffParameter = cutoff
-    resonanceParameter = resonance
+$$ \alpha = \frac{\sin(\omega_0)}{2Q} $$
 
-    // Observe major state changes like a user selecting a user preset.
-    observer = audioUnit?.observe(\.allParameterValues) { object, change in
-        DispatchQueue.main.async {
-            self.updateUI()
-        }
-    }
+### 5. Compressor
+**Function**: Reduces the dynamic range of the vocal, making loud parts quieter and soft parts louder.
+**Controls**: Threshold, Ratio, Attack, Release, Makeup Gain.
 
-    // Observe value changes made to the cutoff and resonance parameters.
-    parameterObserverToken =
-        paramTree.token(byAddingParameterObserver: { [weak self] address, value in
-            guard let self = self else { return }
+**Physics/Math**:
+The compressor calculates a gain factor $g[n]$ based on the signal level relative to the threshold. The dynamic characteristics are defined by the attack ($\tau_a$) and release ($\tau_r$) time constants:
 
-            // This closure is being called by an arbitrary queue. Ensure
-            // all UI updates are dispatched back to the main thread.
-            if [cutoff.address, resonance.address].contains(address) {
-                DispatchQueue.main.async {
-                    self.updateUI()
-                }
-            }
-        })
+$$ c[n] = \begin{cases} \alpha_{att} c[n-1] + (1-\alpha_{att})x_{dB}[n] & x_{dB} > c[n-1] \\ \alpha_{rel} c[n-1] + (1-\alpha_{rel})x_{dB}[n] & x_{dB} \le c[n-1] \end{cases} $$
 
-    // Indicate the view and AU are connected
-    needsConnection = false
+The final output is:
+$$ y[n] = x[n] \cdot 10^{(Makeup - GainReduction)/20} $$
 
-    // Sync UI with parameter state
-    updateUI()
-}
-```
+### 6. Saturation
+**Function**: Adds harmonic distortion to warm up the vocal or add grit.
+**Controls**: Drive (%), Type (Tube/Tape).
 
-As shown above, in the `connectViewToAU()` method, you find the Audio Unit’s parameter tree and retrieve its cutoff and resonance parameters. You also add an observer closure to update the user interface as the plug-in’s parameter values change.
+**Physics/Math**:
+Saturation is achieved through static non-linear waveshaping functions. A common function for soft-clipping (Tube-like saturation) is the hyperbolic tangent:
 
-## Add Factory Presets
-Most audio plug-ins provide a collection of preset values known as _factory presets_. A factory preset is a preconfigured arrangement of the plug-in’s parameter values that provide a useful starting point for further customization. A host app presents these presets in its user interface so the user can select them.
+$$ y[n] = \tanh(k \cdot x[n]) $$
 
-The following code example shows how to define the factory presets and their associated values.
+Where $k$ is the `Drive` factor. As $k$ increases, the linear region shrinks, flattening the peaks of the waveform and introducing odd-order harmonics (3rd, 5th, etc.).
 
-``` swift
-public override var factoryPresets: [AUAudioUnitPreset] {
-    return [
-        AUAudioUnitPreset(number: 0, name: "Prominent"),
-        AUAudioUnitPreset(number: 1, name: "Bright"),
-        AUAudioUnitPreset(number: 2, name: "Warm")
-    ]
-}
+### 7. Resonant Low-Pass Filter
+**Function**: Removes high-frequency content with an optional resonant peak at the cutoff point.
+**Controls**: Cutoff (Hz), Resonance (dB).
 
-private let factoryPresetValues:[(cutoff: AUValue, resonance: AUValue)] = [
-    (2500.0, 5.0),    // "Prominent"
-    (14_000.0, 12.0), // "Bright"
-    (384.0, -3.0)     // "Warm"
-]
-```
+**Physics/Math**:
+Modeled as a digital state-variable filter or a resonant Biquad. The resonance causes a gain boost at the cutoff frequency $\omega_c$. The differential equation for a simplified 1-pole resonant filter could be viewed as:
 
-## Support User Presets
-Factory presets provide a useful starting point for further user customization, but users also want the ability save their changes and create their own custom presets. `AUAudioUnit` provides built-in support for user presets. To enable this support in your Audio Unit, override the [supportsUserPresets][10] property to return `true`.
+$$ y[n] = (1-q)\cdot x[n] + q \cdot y[n-1] $$ (Simple LPF)
 
-``` swift
-/// Indicates that this Audio Unit supports persisting user presets.
-public override var supportsUserPresets: Bool {
-    return true
-}
-```
+With resonance feedback added to the input:
+$$ Input_{filter} = x[n] + \text{Resonance} \cdot (x[n] - y[n-1]) $$
 
-Opting in to support for user presets automatically enables your Audio Unit to load, save, and delete user presets. The default implementation of the [userPresets][11], [saveUserPreset()][12], and [deleteUserPreset()][13] API reads from and writes to an internal store, but you’re free to override this property and methods if you want to directly manage the persistence behavior. For example, you can override the default behavior to persist user presets to an iCloud container or some other remote location.
+### 8. Delay
+**Function**: Creates repeating echoes of the vocal.
+**Controls**: Time (s), Feedback (%), Mix (%).
 
-## Select Factory and User Presets
-A host app selects a factory or user preset by setting the plug-in’s `currentPreset` property. You override this property and take the appropriate action depending on the preset type selected. If the user selected a factory preset (a preset `number` greater than `0`), look up its associated values and set the parameter values accordingly. If the user selected a user preset (a preset `number` less than `0`), restore the preset’s parameter state by calling the [presetState(for:)][14] method and setting the returned data as the [fullStateForDocument][15] property.
+**Physics/Math**:
+A delay is implemented using a circular buffer (memory array). The output is the input from $D$ samples ago:
 
-``` swift
-private var _currentPreset: AUAudioUnitPreset?
+$$ y[n] = x[n] + g_{fb} \cdot y[n-D] $$
 
-/// The currently selected preset.
-public override var currentPreset: AUAudioUnitPreset? {
-    get { return _currentPreset }
-    set {
-        // If the newValue is nil, return.
-        guard let preset = newValue else {
-            _currentPreset = nil
-            return
-        }
-        
-        // Factory presets need to always have a number >= 0.
-        if preset.number >= 0 {
-            let values = factoryPresetValues[preset.number]
-            parameters.setParameterValues(cutoff: values.cutoff, resonance: values.resonance)
-            _currentPreset = preset
-        }
-        // User presets are always negative.
-        else {
-            // Attempt to restore the archived state for this user preset.
-            do {
-                fullStateForDocument = try presetState(for: preset)
-                // Set the currentPreset after we've successfully restored the state.
-                _currentPreset = preset
-            } catch {
-                print("Unable to restore set for preset \(preset.name)")
-            }
-        }
-    }
-}
-```
+Where $D = \text{Time} \cdot f_s$ (samples) and $g_{fb}$ is the feedback gain.
 
-## Package Your Plug-In to Run In-Process
-Like all App Extensions, AUv3 plug-ins run _out-of-process_ by default, which means the extension runs in a separate process from the host app, and all communication between the two occurs over interprocess communication (IPC). This model provides increased security and stability for the host app. For example, if an AUv3 plug-in crashes, the host app won’t crash. However, the IPC communication adds a small amount of overhead to each render cycle, which may be unacceptable depending on the needs of a given application. In macOS only, you can package your plug-in to run _in-process_, which eliminates the IPC communication as your Audio Unit runs as part of the host’s process.
+### 9. Reverb
+**Function**: Simulates the acoustic space (room/hall) around the vocal.
+**Controls**: Size (%), Damp (%), Mix (%).
 
-Running a plug-in in-process requires an agreement between the host and the Audio Unit. The host requests in-process instantiation by passing the [.loadInProcess][16] option during the plug-in’s creation, and you need to package your Audio Unit as described and shown below.
+**Physics/Math**:
+The reverb is based on the Schroeder/Moorer architecture, combining a series of specific filters:
 
-Your extension’s main binary cannot be dynamically loaded into another app, which means all executable code needs to reside in a separate framework bundle. However, the extension target still needs to contain at least one source file for the extension binary to be created, properly loaded, and linked with the framework bundle. To ensure the extension is created, add some unused placeholder code in your extension target, like that found in `AIVExtension.swift`.
+1.  **Comb Filters**: Simulate early reflections ($y[n] = x[n] + g y[n-M]$).
+2.  **All-Pass Filters**: Increase reflection density without altering frequency magnitude ($H(z) = \frac{-g + z^{-M}}{1 - g z^{-M}}$).
 
-``` swift
-import AIVFramework
+The `Damp` parameter introduces a low-pass filter in the feedback loop of the comb filters, simulating the absorption of high frequencies by air and walls over time.
 
-func placeholder() {
-    // This placeholder function ensures the extension correctly loads.
-}
-```
+---
 
-The macOS sample packages all of the Audio Unit’s code into the `AIVFramework` target. You indicate that the extension’s code exists in a separate bundle by adding an `AudioComponentBundle` extension attribute to the target’s Info.plist file.
+## Technical Stack
 
-```xml
-<key>NSExtension</key>
-<dict>
-    <key>NSExtensionAttributes</key>
-    <dict>
-        <key>AudioComponentBundle</key>
-        <string>com.example.apple-samplecode.AIVFramework</string>
-        ...
-    </dict>
-    ...
-</dict>
-```
+*   **Language**: C++ (DSP Kernel), Swift (UI & Logic)
+*   **Frameworks**: CoreAudio, AudioToolbox, SwiftUI, AVFoundation
+*   **Architecture**: AUAudioUnit (v3)
+*   **Platform**: macOS & iOS
 
-If you’re using a xib or Storyboard for your user interface, override your view controller’s [init(nibName:bundle:)][17] initializer and pass the framework bundle to the superclass initializer. This ensures your user interface properly loads when the system requests your Audio Unit extension.
+## Integration
 
-``` swift
-public override init(nibName: NSNib.Name?, bundle: Bundle?) {
-    // Pass a reference to the owning framework bundle
-    super.init(nibName: nibName, bundle: Bundle(for: type(of: self)))
-}
-```
-
-Finally, in the extension’s Info.plist file, set the Audio Unit’s factory object, `AIVDemoViewController`, as the extension’s principal class.
-
-```xml
-<key>NSExtension</key>
-<dict>
-    <key>NSExtensionPrincipalClass</key>
-    <string>AIVFramework.AIVDemoViewController</string>
-    ...
-</dict>
-```
-
-- Note: See [Incorporating Audio Effects and Instruments][18] for a host app you can use to load your plug-in in-process and out-of-process.
-
-
-
-[1]:	https://developer.apple.com/library/archive/documentation/General/Conceptual/ExtensibilityPG
-[2]:	https://developer.apple.com/documentation/audiotoolbox/audio_unit_v3_plug-ins/incorporating_audio_effects_and_instruments
-[3]:	https://developer.apple.com/documentation/audiotoolbox/auaudiounit
-[4]:	https://developer.apple.com/documentation/audiotoolbox/auaudiounitfactory
-[5]:	https://developer.apple.com/documentation/audiotoolbox/auaudiounitfactory/1440321-createaudiounit
-[6]:	https://developer.apple.com/documentation/audiotoolbox/auparametertree
-[7]:	https://developer.apple.com/documentation/audiotoolbox/auparameternode/1439658-implementorvalueobserver
-[8]:	https://developer.apple.com/documentation/audiotoolbox/auparameternode/1439942-implementorvalueprovider
-[9]:	https://developer.apple.com/documentation/audiotoolbox/auparameternode/1440045-implementorstringfromvaluecallba
-[10]:	https://developer.apple.com/documentation/audiotoolbox/auaudiounit/3152393-supportsuserpresets
-[11]:	https://developer.apple.com/documentation/audiotoolbox/auaudiounit/3152394-userpresets
-[12]:	https://developer.apple.com/documentation/audiotoolbox/auaudiounit/3152392-saveuserpreset
-[13]:	https://developer.apple.com/documentation/audiotoolbox/auaudiounit/3152389-deleteuserpreset
-[14]:	https://developer.apple.com/documentation/audiotoolbox/auaudiounit/3152391-presetstatefor
-[15]:	https://developer.apple.com/documentation/audiotoolbox/auaudiounit/1387630-fullstatefordocument
-[16]:	https://developer.apple.com/documentation/audiotoolbox/audiocomponentinstantiationoptions/1410490-loadinprocess
-[17]:	https://developer.apple.com/documentation/appkit/nsviewcontroller/1434481-init
-[18]:	https://developer.apple.com/documentation/audiotoolbox/audio_unit_v3_plug-ins/incorporating_audio_effects_and_instruments
-
-[image-1]:	Documentation/graph.png "plug-in User Interface"
+1.  Open Logic Pro X or GarageBand.
+2.  Create an Audio Track.
+3.  Load `AIVDemo` from the Audio Units list under your manufacturer name.
+4.  The custom SwiftUI interface will launch, providing real-time control over all parameters.
