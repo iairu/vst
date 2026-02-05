@@ -1,3 +1,14 @@
+improve README.md to properly explain physics behind these features, do not remove any content:
+
+- Auto Level: It automatically equalizes the volume, so that it's not quiet and loud at times.
+- Pitch: It fine-tunes false notes to make it sound professional.
+- Deesser: We erase those sharp "S" and "C", we clean it up like a mess.
+- Compressor: The absolute basics, it makes the voice fat, hard and pulls it forward.
+- EQ and Saturation: Gives it color and that expensive shine.
+- Reverb: So that it doesn't sound dry, but it has space.
+
+---
+
 # AIV Vocal Chain
 
 AIV (Artificial Intelligence Vocal) Chain is a comprehensive Logic Pro AudioUnit extension designed to deliver professional-grade vocal processing. It combines a suite of essential audio effects into a single, high-performance C++ DSP kernel with a modern, hardware-accelerated SwiftUI interface.

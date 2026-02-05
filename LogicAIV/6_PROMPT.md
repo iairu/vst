@@ -1,0 +1,1 @@
+create a prompt gallery based on 5_PHYSICS_RESEARCH.md and 6_FEATURE_LIST.md with additional consideration for current project structure and UX improvements, include xcodebuild step in all prompts so that gemini automatically fixes errors until build success:
