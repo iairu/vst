@@ -1,0 +1,62 @@
+name: Build and Publish LogicAIV
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on version tags (e.g., v1.0.0)
+  workflow_dispatch: # Allow manual trigger via GitHub UI
+
+permissions:
+  contents: write # Needed for creating releases
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 'latest-stable'
+
+      - name: Build macOS App
+        # Build the Container App (Scheme: AIV macOS)
+        # Use Ad-Hoc code signing or none to prevent build failure on CI
+        run: |
+          cd LogicAIV
+          xcodebuild -project AIV.xcodeproj \
+            -scheme "AIV macOS" \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            clean build
+
+      - name: Archive and Zip
+        run: |
+          cd LogicAIV/build/Build/Products/Release/
+          # Verify App exists
+          if [ -d "AIV.app" ]; then
+            echo "AIV.app found. Zipping..."
+            zip -r ../../../../AIV.app.zip AIV.app
+          else
+            echo "Error: AIV.app not found!"
+            exit 1
+          fi
+          cd ../../../..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            LogicAIV/AIV.app.zip
+            LogicAIV/INSTALL.md
+          body_path: LogicAIV/INSTALL.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
