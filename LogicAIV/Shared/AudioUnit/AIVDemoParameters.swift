@@ -268,6 +268,7 @@ class AIVDemoParameters {
         reverbDampParam.value = 50.0
         
         reverbMixParam = AUParameterTree.createParameter(withIdentifier: "reverbMix", name: "Mix", address: AIVParam.reverbMix.rawValue, min: 0.0, max: 100.0, unit: .percent, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)
+        reverbMixParam.value = 40.0
     
         // Auto Level
         autoLevelTargetParam = AUParameterTree.createParameter(withIdentifier: "autoLevelTarget", name: "Target Level", address: AIVParam.autoLevelTarget.rawValue, min: -60.0, max: 0.0, unit: .decibels, unitName: nil, flags: [.flag_IsReadable, .flag_IsWritable], valueStrings: nil, dependentParameters: nil)

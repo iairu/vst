@@ -33,76 +33,109 @@ public:
 
   // Called once per block to update control signals
   void processLogic(const float *inputBuffer, int numSamples,
-                    float currentGateState, float currentCompGR) {
+                    float currentGateState, float currentCompGR,
+                    double sampleRate) {
 
-    // 1. ANALYZE INPUT (Tap A)
-    float inputRMS = calculateRMS(inputBuffer, numSamples);
-    float inputPeak = calculatePeak(inputBuffer, numSamples);
+    // Calculate coeffs if sample rate changed (approx check)
+    // 1-pole coeff: exp(-2pi * freq / sr)
+    if (sampleRate != mSampleRate) {
+      mSampleRate = sampleRate;
+      coeff200 = 1.0 - std::exp(-2.0 * kPi * 200.0 / sampleRate);
+      coeff500 = 1.0 - std::exp(-2.0 * kPi * 500.0 / sampleRate);
+      coeff2000 = 1.0 - std::exp(-2.0 * kPi * 2000.0 / sampleRate);
+      coeff5000 = 1.0 - std::exp(-2.0 * kPi * 5000.0 / sampleRate);
+    }
+
+    // 1. ANALYZE INPUT (Tap A) & SPECTRAL BANDS (Tap C)
+    // We iterate the buffer to update filter states and accumulate energy
+    float sumSq = 0.0f;
+    float peak = 0.0f;
+
+    float sumMud = 0.0f;
+    float sumCore = 0.0f;
+    float sumScreech = 0.0f;
+
+    for (int i = 0; i < numSamples; ++i) {
+      float s = inputBuffer[i];
+      float absS = std::fabs(s);
+      if (absS > peak)
+        peak = absS;
+      sumSq += s * s;
+
+      // 1-pole LPFs
+      // y += coeff * (x - y)
+      state200 += coeff200 * (s - state200);
+      state500 += coeff500 * (s - state500);
+      state2000 += coeff2000 * (s - state2000);
+      state5000 += coeff5000 * (s - state5000);
+
+      // Band Isolation (Subtraction)
+      // Mud: 200-500Hz -> LPF500 - LPF200
+      float mudSample = state500 - state200;
+      sumMud += mudSample * mudSample;
+
+      // Core: 500-2000Hz -> LPF2000 - LPF500
+      float coreSample = state2000 - state500;
+      sumCore += coreSample * coreSample;
+
+      // Screech: 2000-5000Hz -> LPF5000 - LPF2000
+      float screechSample = state5000 - state2000;
+      sumScreech += screechSample * screechSample;
+    }
+
+    float inputRMS = std::sqrt(sumSq / numSamples + 1e-9f);
 
     // 2. SAFETY PRE-GAIN (Clipping Fix)
-    if (inputPeak > 0.7f) {  // approx -3dB
-      mSafetyPadGain = 0.5f; // -6dB Pad
+    // Fast attack, slow release safety pad
+    if (peak > 0.707f) { // -3dB
+      // Attenuate to target -6dB (0.5)
+      // Gain = 0.5 / peak;
+      float requiredGain = 0.5f / peak;
+      if (requiredGain < mSafetyPadGain)
+        mSafetyPadGain = requiredGain;
     } else {
       mSafetyPadGain = 0.999f * mSafetyPadGain + 0.001f * 1.0f;
     }
 
-    // 3. AUTO-LEVEL LOGIC (Gate Aware)
-    if (currentGateState > 0.5f) { // Gate is open
+    // 3. AUTO-LEVEL LOGIC
+    if (currentGateState > 0.5f) {
       float errordB = mTargetRMS_Input - 20.0f * log10f(inputRMS + 0.0001f);
       mAutoLevelGainDB = errordB;
-      // Clamp gain
       if (mAutoLevelGainDB > 12.0f)
         mAutoLevelGainDB = 12.0f;
       if (mAutoLevelGainDB < -12.0f)
         mAutoLevelGainDB = -12.0f;
     }
-    // Else freeze
 
-    // 4. LINK COMPRESSOR TO AUTO-LEVEL
+    // 4. LINK COMPRESSOR
     mCompThresholdOffset = mAutoLevelGainDB;
 
-    // 5. SPECTRAL ANALYSIS (Tap C - Pre-Dynamics)
-    // Simplified energy measurement (RMS ratio approximation)
-    // In full implementation, we would filter the buffer.
-    // For efficiency in this constrained context, we'll assume a placeholder or
-    // simple estimate Real bandpass filtering is expensive in a lightweight
-    // supervisor without allocated state per band. We will assume "Mud" is
-    // handled by the dynamic EQ logic in the kernel if we had band splitters.
-    // HERE: We'll implement a basic spectral tilt check if possible, or just
-    // placeholders as per prompt structure. The prompt asks for
-    // "measureBandEnergy". We will implement a simplified version or rely on
-    // the fact that high energy + high crest factor often means screech.
+    // 5. SPECTRAL LOGIC
+    float mudRMS = std::sqrt(sumMud / numSamples + 1e-9f);
+    float coreRMS = std::sqrt(sumCore / numSamples + 1e-9f);
+    float screechRMS = std::sqrt(sumScreech / numSamples + 1e-9f);
 
-    // Let's implement a very basic 1-pole LPF/HPF based energy estimator for
-    // broad bands as an approximation
-
-    // For now, using placeholders to satisfy the architecture
-    float mudEnergy =
-        0.0f; // measureBandEnergy(inputBuffer, numSamples, kBand_Mud);
-    float coreEnergy =
-        0.0f; // measureBandEnergy(inputBuffer, numSamples, kBand_Core);
-    // float screechEnergy = measureBandEnergy(inputBuffer, numSamples,
-    // kBand_Screech);
-
-    // Since we can't easily filter strictly without state, we'll skip the
-    // detailed DSP inside this Logic to avoid compiling errors with missing
-    // filter states. We will set default safe values or dynamic values based on
-    // RMS.
-
-    // MUD CUT LOGIC (Simulated for minimal implementation)
-    // If input is loud, assume some mud buildup?
-    if (inputRMS > 0.1f) {
-      mMudCutDB = -1.0f; // Slight cut when loud
+    // MUD CUT
+    // If Mud is > Core (Reference: Pink noise, Mud should be ~equal or less
+    // than Core?) Actually Mud (200-500) vs Core (500-2000). Bandwidth is
+    // similar (1.3 oct vs 2 oct). Let's assume ratio threshold 1.2
+    float mudRatio = mudRMS / (coreRMS + 1e-5f);
+    if (mudRatio > 1.2f && inputRMS > 0.05f) {
+      float excess = mudRatio - 1.2f;
+      mMudCutDB = -1.0f * (excess * 6.0f);
+      if (mMudCutDB < -9.0f)
+        mMudCutDB = -9.0f;
     } else {
-      mMudCutDB = 0.0f;
+      mMudCutDB *= 0.98f; // Release
     }
 
-    // SCREECH LOGIC
-    // If RMS is very high, dampen saturation
-    if (inputRMS > 0.25f) { // -12dB
-      mSatDriveScaler = 0.8f;
+    // SCREECH DAMPING
+    // If Screech > Core * 0.8 (Screech should be lower in pink noise)
+    float screechRatio = screechRMS / (coreRMS + 1e-5f);
+    if (screechRatio > 0.8f && inputRMS > 0.05f) {
+      mSatDriveScaler = 0.7f; // Dampen
     } else {
-      mSatDriveScaler = 1.0f;
+      mSatDriveScaler = mSatDriveScaler * 0.99f + 0.01f * 1.0f; // Recover
     }
   }
 
@@ -122,21 +155,18 @@ private:
   float mTargetRMS_Input;
   float mTargetPeak_Output;
 
-  float calculateRMS(const float *buffer, int numSamples) {
-    float sum = 0.0f;
-    for (int i = 0; i < numSamples; i++)
-      sum += buffer[i] * buffer[i];
-    return std::sqrt(sum / numSamples);
-  }
+  // Analysis Filters
+  double mSampleRate = 44100.0;
+  float state200 = 0, state500 = 0, state2000 = 0, state5000 = 0;
+  float coeff200 = 0, coeff500 = 0, coeff2000 = 0, coeff5000 = 0;
 
+  float calculateRMS(const float *buffer, int numSamples) {
+    // unused helper now integrated in main loop
+    return 0.0f;
+  }
   float calculatePeak(const float *buffer, int numSamples) {
-    float maxVal = 0.0f;
-    for (int i = 0; i < numSamples; i++) {
-      float absVal = std::fabs(buffer[i]);
-      if (absVal > maxVal)
-        maxVal = absVal;
-    }
-    return maxVal;
+    // unused helper now integrated in main loop
+    return 0.0f;
   }
 };
 
@@ -884,15 +914,27 @@ private:
 // --- Saturator ---
 class Saturator {
 public:
-  void setParameters(double drive, double type) {
+  void setParameters(double drive, double type, double sampleRate) {
     this->drive = 1.0 + (drive / 10.0); // 1.0 to 11.0 range approx
     this->type = (int)type;
+
+    // Sandwich Distortion Filters
+    // Pre: Cut Screech frequencies (-6dB High Shelf @ 4k)
+    mPreTone.calculateCoefficients(BiquadFilter::HighShelf, 4000.0, 0.707, -6.0,
+                                   sampleRate);
+    // Post: Boost back (+6dB High Shelf @ 4k)
+    mPostTone.calculateCoefficients(BiquadFilter::HighShelf, 4000.0, 0.707, 6.0,
+                                    sampleRate);
   }
 
   void setDriveScale(double scale) { this->driveScale = scale; }
 
   float process(float input) {
-    float x = input * drive * driveScale;
+    // 1. Pre-Tone
+    float pre = mPreTone.process(input);
+
+    // 2. Saturate
+    float x = pre * drive * driveScale;
 
     if (type == 0) { // Soft Clip (Tape-ish)
       if (x > 1.0f)
@@ -905,13 +947,16 @@ public:
       x = std::tanh(x);
     }
 
-    return x;
+    // 3. Post-Tone
+    return mPostTone.process(x);
   }
 
 private:
   double drive = 1.0;
   double driveScale = 1.0;
   int type = 0;
+  BiquadFilter mPreTone;
+  BiquadFilter mPostTone;
 };
 
 // --- Pitch Shifter (Granular) ---

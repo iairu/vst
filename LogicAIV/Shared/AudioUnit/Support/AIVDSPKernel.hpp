@@ -249,12 +249,12 @@ public:
     case AIVParameterAddressSatDrive:
       mSatDrive = value;
       for (auto &s : mSaturator)
-        s.setParameters(mSatDrive, mSatType);
+        s.setParameters(mSatDrive, mSatType, mSampleRate);
       break;
     case AIVParameterAddressSatType:
       mSatType = value;
       for (auto &s : mSaturator)
-        s.setParameters(mSatDrive, mSatType);
+        s.setParameters(mSatDrive, mSatType, mSampleRate);
       break;
 
     // Delay
@@ -341,7 +341,7 @@ public:
     case AIVParameterAddressDelayEnable:
       return (AUValue)(mDelayEnable ? 1.0f : 0.0f);
     case AIVParameterAddressReverbEnable:
-
+      return (AUValue)(mReverbEnable ? 1.0f : 0.0f);
     case AIVParameterAddressPitchEnable:
       return (AUValue)(mPitchEnable ? 1.0f : 0.0f);
     case AIVParameterAddressLimiterEnable:
@@ -506,8 +506,8 @@ public:
       float internalGateState = mGate[channel].isOpen() ? 1.0f : 0.0f;
       // Comp GR: potentially needed, currently unused by implementation.
 
-      mNormalizer[channel].processLogic(in, frameCount, internalGateState,
-                                        0.0f);
+      mNormalizer[channel].processLogic(in, frameCount, internalGateState, 0.0f,
+                                        mSampleRate);
 
       // 2. Retrieve & Apply Controls
       float autoGainDB = mNormalizer[channel].getAutoLevelGain();
