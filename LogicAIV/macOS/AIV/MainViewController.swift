@@ -25,6 +25,10 @@ class MainViewController: NSViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        // Clear all existing subviews (this removes the Storyboard layout: Parameters Box, etc.)
+        self.view.subviews.forEach { $0.removeFromSuperview() }
+        
         embedPlugInView()
         populatePresetMenu()
         audioUnitManager.delegate = self
@@ -33,6 +37,13 @@ class MainViewController: NSViewController {
     override func viewWillAppear() {
         super.viewWillAppear()
         view.window?.delegate = self
+        
+        // Remove "Toggle" button from toolbar if present
+        if let toolbar = view.window?.toolbar {
+            if let index = toolbar.items.firstIndex(where: { $0.label == "Toggle" }) {
+                toolbar.removeItem(at: index)
+            }
+        }
     }
 
     private func embedPlugInView() {
@@ -40,9 +51,9 @@ class MainViewController: NSViewController {
             fatalError("Could not load audio unit's view controller.")
         }
 
-        // Present the view controller's view.
+        // Present the view controller's view full screen
         addChild(controller)
-        containerView.addSubview(controller.view)
+        view.addSubview(controller.view)
         controller.view.pinToSuperviewEdges()
     }
 
@@ -81,12 +92,12 @@ class MainViewController: NSViewController {
 
     /// Cutoff frequency value changed handler
     @IBAction func cutoffSliderValueChanged(_ sender: NSSlider) {
-        audioUnitManager.cutoffValue = frequencyValueForSliderLocation(sender.floatValue)
+        // audioUnitManager.cutoffValue = frequencyValueForSliderLocation(sender.floatValue)
     }
 
     /// Resonance value changed handler
     @IBAction func resonanceSliderValueChanged(_ sender: NSSlider) {
-        audioUnitManager.resonanceValue = sender.floatValue
+        // audioUnitManager.resonanceValue = sender.floatValue
     }
 
     // MARK: Private
@@ -113,22 +124,6 @@ extension MainViewController: NSWindowDelegate {
 }
 
 extension MainViewController: AUManagerDelegate {
-
-    func cutoffValueDidChange(_ value: Float) {
-
-        // Normalize the vaue from 0-1
-        var normalizedValue = (value - defaultMinHertz) / (defaultMaxHertz - defaultMinHertz)
-
-        // Map to 2^0 - 2^9 (slider range)
-        normalizedValue = (normalizedValue * 511.0) + 1
-
-        cutoffSlider.floatValue = Float(logValueForNumber(normalizedValue))
-        cutoffTextField.text = String(format: "%.f", value)
-    }
-
-    func resonanceValueDidChange(_ value: Float) {
-        resonanceSlider.floatValue = value
-        resonanceTextField.text = String(format: "%.2f", value)
-    }
+    // Legacy support removed
 }
 

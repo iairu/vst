@@ -6,19 +6,27 @@ struct InputPanel: View {
     @ObservedObject var viewModel: AudioUnitViewModel
     
     var body: some View {
-        RackPanel(title: "Input Stage") {
+        RackPanel(title: "Input Stage", isEnabled: $viewModel.satEnable) {
             HStack(spacing: 20) {
                 ArcKnob(value: $viewModel.inputGain, range: -24...24, title: "Input", unit: "dB")
                 
-                VStack {
+                VStack(spacing: 5) {
                     Text("Phase")
                         .font(.caption)
                         .foregroundColor(.gray)
+                    
                     SwiftUI.Button(action: { viewModel.phaseInvert = viewModel.phaseInvert > 0.5 ? 0 : 1 }) {
-                        Image(systemName: "phase.invert")
-                            .foregroundColor(viewModel.phaseInvert > 0.5 ? .orange : .gray)
-                            .font(.title2)
+                        ZStack {
+                            Circle()
+                                .fill(viewModel.phaseInvert > 0.5 ? Color.orange.opacity(0.8) : Color.white.opacity(0.1))
+                                .frame(width: 25, height: 25)
+                            
+                            Image(systemName: "phase.invert")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(viewModel.phaseInvert > 0.5 ? .white : .gray)
+                        }
                     }
+                    .buttonStyle(PlainButtonStyle())
                 }
                 
                 ArcKnob(value: $viewModel.saturation, range: 0...100, title: "Drive", unit: "%")
@@ -34,11 +42,6 @@ struct InputPanel: View {
                     .pickerStyle(SegmentedPickerStyle())
                     .frame(width: 80)
                 }
-                
-                // Saturation Enable
-                Toggle("", isOn: $viewModel.satEnable)
-                    .toggleStyle(SwitchToggleStyle(tint: .cyan))
-                    .labelsHidden()
             }
         }
     }

@@ -22,8 +22,7 @@ public struct Preset {
 
 // Delegate protocol to be adopted to be notified of parameter value changes.
 public protocol AUManagerDelegate: AnyObject {
-    func cutoffValueDidChange(_ value: Float)
-    func resonanceValueDidChange(_ value: Float)
+    // Legacy parameters removed
 }
 
 // Controller object used to manage the interaction with the audio unit and its user interface.
@@ -32,26 +31,9 @@ public class AudioUnitManager {
     /// The user-selected audio unit.
     private var audioUnit: AIVDemo?
 
-    public weak var delegate: AUManagerDelegate? {
-        didSet {
-            updateCutoff()
-            updateResonance()
-        }
-    }
+    public weak var delegate: AUManagerDelegate? 
 
     public private(set) var viewController: AIVDemoViewController!
-
-    public var cutoffValue: Float = 0.0 {
-        didSet {
-            cutoffParameter.value = cutoffValue
-        }
-    }
-
-    public var resonanceValue: Float = 0.0 {
-        didSet {
-            resonanceParameter.value = resonanceValue
-        }
-    }
 
     // Gets the audio unit's defined presets.
     public var presets: [Preset] {
@@ -76,12 +58,6 @@ public class AudioUnitManager {
 
     /// The playback engine used to play audio.
     private let playEngine = SimplePlayEngine()
-
-    // The audio unit's filter cutoff frequency parameter object.
-    private var cutoffParameter: AUParameter!
-
-    // The audio unit's filter resonance parameter object.
-    private var resonanceParameter: AUParameter!
 
     // A token for our registration to observe parameter value changes.
     private var parameterObserverToken: AUParameterObserverToken!
@@ -157,40 +133,8 @@ public class AudioUnitManager {
         }
 
         viewController.audioUnit = audioUnit
-
-        // Find our parameters by their identifiers.
-        guard let parameterTree = audioUnit.parameterTree else {
-            fatalError("AIVDemo does not define any parameters.")
-        }
-
-        cutoffParameter = parameterTree.value(forKey: "eq1Freq") as? AUParameter
-        resonanceParameter = parameterTree.value(forKey: "eq1Q") as? AUParameter
-
-        parameterObserverToken = parameterTree.token(byAddingParameterObserver: { [weak self] address, _ in
-            guard let self = self else { return }
-            /*
-             This is called when one of the parameter values changes.
-             We can only update UI from the main queue.
-             */
-            DispatchQueue.main.async {
-                if address == self.cutoffParameter.address {
-                    self.updateCutoff()
-                } else if address == self.resonanceParameter.address {
-                    self.updateResonance()
-                }
-            }
-        })
-    }
-
-    // Callbacks to update controls from parameters.
-    func updateCutoff() {
-        guard let param = cutoffParameter else { return }
-        delegate?.cutoffValueDidChange(param.value)
-    }
-
-    func updateResonance() {
-        guard let param = resonanceParameter else { return }
-        delegate?.resonanceValueDidChange(param.value)
+        
+        // No standalone parameter handling needed - pure View Controller hosting
     }
 
     @discardableResult
