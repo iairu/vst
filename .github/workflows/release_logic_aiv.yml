@@ -45,12 +45,12 @@ jobs:
           
           # 2. Sign Extension with Sandbox Entitlements
           # Must have App Sandbox entitlement for AUv3 to pass containermanagerd checks
-          ENTITLEMENTS_PATH="../../../../../macOS/AIVExtension/AIVExtension.entitlements"
+          ENTITLEMENTS_PATH="../../../../macOS/AIVExtension/AIVExtension.entitlements"
           codesign --force --verbose --entitlements "$ENTITLEMENTS_PATH" -s - "AIV.app/Contents/PlugIns/AIVExtension.appex"
           
           # 3. Sign Main App with Empty Entitlements (No Sandbox)
           # AIV.entitlements is empty, which means NO sandbox.
-          APP_ENTITLEMENTS_PATH="../../../../../macOS/AIV/AIV.entitlements"
+          APP_ENTITLEMENTS_PATH="../../../../macOS/AIV/AIV.entitlements"
           codesign --force --verbose --entitlements "$APP_ENTITLEMENTS_PATH" -s - "AIV.app"
 
       - name: Archive and Zip
