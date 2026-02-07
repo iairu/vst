@@ -155,3 +155,56 @@ public class AudioUnitManager {
         parameterObserverToken = nil
     }
 }
+
+#if os(macOS)
+public class RegistrationManager {
+    public static func checkStatus() -> String {
+        var status = "--- Audio Component Search ---\n"
+        
+        // 1. Check AVAudioUnitComponentManager
+        let description = AudioComponentDescription(componentType: kAudioUnitType_Effect, 
+                                                    componentSubType: 0x666c7472, // 'fltr'
+                                                    componentManufacturer: 0x69616972, // 'iair'
+                                                    componentFlags: 0, 
+                                                    componentFlagsMask: 0)
+                                                    
+        let components = AVAudioUnitComponentManager.shared().components(matching: description)
+        
+        if let comp = components.first {
+            status += "✅ Found: \(comp.name) (v\(comp.versionString))\n"
+            status += "   Manufacturer: \(comp.manufacturerName)\n"
+            status += "   Format: \(comp.typeName)\n"
+        } else {
+            status += "❌ NOT FOUND in System Registry\n"
+            status += "   (Make sure to run the app once to register)\n"
+        }
+        
+        status += "\n--- Pluginkit Query ---\n"
+        
+        // 2. Run pluginkit
+        let task = Process()
+        task.launchPath = "/usr/bin/pluginkit"
+        task.arguments = ["-m", "-v", "-D", "-i", "com.iairu.AIV.AIVExtension"]
+        
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = pipe
+        
+        do {
+            try task.run()
+            task.waitUntilExit()
+            
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8), !output.isEmpty {
+                status += output
+            } else {
+                status += "⚠️ No output from pluginkit (Extension not found or permission denied)\n"
+            }
+        } catch {
+            status += "Error running pluginkit: \(error)\n"
+        }
+        
+        return status
+    }
+}
+#endif

@@ -32,6 +32,7 @@ class MainViewController: NSViewController {
         embedPlugInView()
         populatePresetMenu()
         audioUnitManager.delegate = self
+        setupRegistrationUI()
     }
 
     override func viewWillAppear() {
@@ -113,6 +114,56 @@ class MainViewController: NSViewController {
         value *= (defaultMaxHertz - defaultMinHertz)
 
         return value + defaultMinHertz
+    }
+
+    // MARK: - Registration Status UI
+    
+    private var statusTextView: NSTextView?
+    
+    private func setupRegistrationUI() {
+        let statusButton = NSButton(title: "Check Registration Status", target: self, action: #selector(checkRegistrationStatus))
+        statusButton.frame = CGRect(x: 20, y: 20, width: 200, height: 30) // Bottom left
+        
+        let scrollView = NSScrollView(frame: CGRect(x: 20, y: 60, width: 400, height: 150))
+        scrollView.hasVerticalScroller = true
+        scrollView.borderType = .bezelBorder
+        
+        let textView = NSTextView(frame: scrollView.bounds)
+        textView.isEditable = false
+        textView.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        textView.string = "Click 'Check Registration Status' to verify..."
+        
+        scrollView.documentView = textView
+        self.statusTextView = textView
+        
+        // Add to view (overlay on top of existing content for debug visibility)
+        self.view.addSubview(scrollView)
+        self.view.addSubview(statusButton)
+        
+        // Pin to bottom left to avoid obscuring main UI too much (if possible, or just overlay)
+        statusButton.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            statusButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            statusButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
+            statusButton.widthAnchor.constraint(equalToConstant: 200),
+            
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            scrollView.bottomAnchor.constraint(equalTo: statusButton.topAnchor, constant: -10),
+            scrollView.widthAnchor.constraint(equalToConstant: 500),
+            scrollView.heightAnchor.constraint(equalToConstant: 200)
+        ])
+    }
+    
+    @objc private func checkRegistrationStatus() {
+        statusTextView?.string = "Checking..."
+        DispatchQueue.global(qos: .userInitiated).async {
+            let status = RegistrationManager.checkStatus()
+            DispatchQueue.main.async {
+                self.statusTextView?.string = status
+            }
+        }
     }
 }
 
