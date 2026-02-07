@@ -120,6 +120,7 @@ class MainViewController: NSViewController {
     
     private var statusTextView: NSTextView?
     
+    private func setupRegistrationUI() {
         let statusButton = NSButton(title: "Check Status", target: self, action: #selector(checkRegistrationStatus))
         statusButton.frame = CGRect(x: 20, y: 20, width: 120, height: 30)
         
