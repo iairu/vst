@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>AIVExtension</string>
+	<string>AIVAlpha</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -28,13 +28,13 @@
 			<array>
 				<dict>
 					<key>description</key>
-					<string>AIVExtension</string>
+					<string>AIVAlpha</string>
 					<key>factoryFunction</key>
 					<string>$(PRODUCT_MODULE_NAME).AIVDemoViewController</string>
 					<key>manufacturer</key>
-					<string>Demo</string>
+					<string>iairu</string>
 					<key>name</key>
-					<string>Demo: AIVExtension</string>
+					<string>iairu: AIVAlpha</string>
 					<key>sandboxSafe</key>
 					<true/>
 					<key>subtype</key>
