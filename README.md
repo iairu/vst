@@ -1,5 +1,5 @@
-# VST Plugins by iairu
+# Logic Pro (and VST3) Plugins by iairu
 
-Zone - adjusts sounds to fit ZUN's touhou soundtracks (harmonie navyse, compress+eq, analyza hlasu, tvorba vocal chainu)
+WIP Zone VST - adjusts sounds to fit ZUN's touhou soundtracks (harmonie navyse, compress+eq, analyza hlasu, tvorba vocal chainu)
 
-AIV - AI adjusted Vocals, inspired by Nectar 4
+LogicAIV + WIP AIV VST - Adjusting Vocals (Vocal Chain), inspired by Nectar 4
