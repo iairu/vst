@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vstgui-ui-description version="1">
+    <fonts>
+        <font bold="true" font-name="Arial" name="ModuleTitle" size="11"/>
+        <font bold="false" font-name="Arial" name="KnobLabel" size="9"/>
+        <font bold="true" font-name="Arial" name="HeaderFont" size="16"/>
+    </fonts>
+    <colors>
+        <color name="Background" rgba="#1a1a24ff"/>
+        <color name="ModuleBg" rgba="#252532ff"/>
+        <color name="ModuleEnabled" rgba="#4a90d9ff"/>
+        <color name="SliderBg" rgba="#3a3a4aff"/>
+        <color name="SliderFill" rgba="#6bb5ffff"/>
+        <color name="SliderHandle" rgba="#ffffffff"/>
+        <color name="TextLight" rgba="#e0e0e8ff"/>
+        <color name="TextDim" rgba="#8888a0ff"/>
+        <color name="AccentGold" rgba="#d4a853ff"/>
+    </colors>
+    
+    <!-- Main View -->
+    <template background-color="Background" class="CViewContainer" mouse-enabled="true" name="view" opacity="1" origin="0, 0" size="1000, 520" transparent="false">
+        
+        <!-- Header -->
+        <view class="CViewContainer" origin="0, 0" size="1000, 50" background-color="ModuleBg">
+            <view class="CTextLabel" origin="20, 10" size="200, 30" text-alignment="left" font="HeaderFont" font-color="TextLight" title="AIV Vocal Suite"/>
+            
+            <!-- Global Controls - Horizontal Sliders -->
+            <view class="CTextLabel" origin="720, 8" size="50, 14" font="KnobLabel" font-color="TextDim" title="Input" text-alignment="right"/>
+            <view class="CSlider" origin="775, 8" size="60, 14" control-tag="0" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" handle-offset="0, 0" frame-color="SliderBg" back-color="SliderBg" draw-value-inverted="true" draw-back="true" draw-back-color="SliderFill" draw-frame="true" draw-frame-color="SliderBg"/>
+            
+            <view class="CTextLabel" origin="720, 28" size="50, 14" font="KnobLabel" font-color="TextDim" title="Output" text-alignment="right"/>
+            <view class="CSlider" origin="775, 28" size="60, 14" control-tag="1" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" handle-offset="0, 0" frame-color="SliderBg" back-color="SliderBg" draw-value-inverted="true" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="850, 8" size="40, 14" font="KnobLabel" font-color="TextDim" title="Mix" text-alignment="right"/>
+            <view class="CSlider" origin="895, 8" size="60, 14" control-tag="2" default-value="1" min-value="0" max-value="1" orientation="horizontal" handle-offset="0, 0" frame-color="SliderBg" back-color="SliderBg" draw-value-inverted="true" draw-back="true" draw-back-color="AccentGold" draw-frame="true"/>
+        </view>
+        
+        <!-- Row 1: Gate, Compressor, De-esser -->
+        
+        <!-- Gate Module -->
+        <view class="CViewContainer" origin="10, 60" size="190, 140" background-color="ModuleBg" round-rect-radius="5">
+            <view class="COnOffButton" origin="10, 8" size="16, 16" control-tag="10"/>
+            <view class="CTextLabel" origin="30, 8" size="60, 16" font="ModuleTitle" font-color="TextLight" title="GATE" text-alignment="left"/>
+            
+            <view class="CTextLabel" origin="10, 32" size="80, 12" font="KnobLabel" font-color="TextDim" title="Threshold" text-alignment="left"/>
+            <view class="CSlider" origin="10, 46" size="170, 12" control-tag="11" default-value="0.25" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 62" size="80, 12" font="KnobLabel" font-color="TextDim" title="Attack" text-alignment="left"/>
+            <view class="CSlider" origin="10, 76" size="80, 12" control-tag="12" default-value="0.01" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="100, 62" size="80, 12" font="KnobLabel" font-color="TextDim" title="Release" text-alignment="left"/>
+            <view class="CSlider" origin="100, 76" size="80, 12" control-tag="14" default-value="0.2" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 92" size="80, 12" font="KnobLabel" font-color="TextDim" title="Hold" text-alignment="left"/>
+            <view class="CSlider" origin="10, 106" size="80, 12" control-tag="13" default-value="0.1" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="100, 92" size="80, 12" font="KnobLabel" font-color="TextDim" title="Range" text-alignment="left"/>
+            <view class="CSlider" origin="100, 106" size="80, 12" control-tag="15" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+        </view>
+        
+        <!-- Compressor Module -->
+        <view class="CViewContainer" origin="210, 60" size="220, 140" background-color="ModuleBg" round-rect-radius="5">
+            <view class="COnOffButton" origin="10, 8" size="16, 16" control-tag="20"/>
+            <view class="CTextLabel" origin="30, 8" size="100, 16" font="ModuleTitle" font-color="TextLight" title="COMPRESSOR" text-alignment="left"/>
+            
+            <view class="CTextLabel" origin="10, 32" size="80, 12" font="KnobLabel" font-color="TextDim" title="Threshold" text-alignment="left"/>
+            <view class="CSlider" origin="10, 46" size="95, 12" control-tag="21" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="115, 32" size="80, 12" font="KnobLabel" font-color="TextDim" title="Ratio" text-alignment="left"/>
+            <view class="CSlider" origin="115, 46" size="95, 12" control-tag="22" default-value="0.2" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 62" size="80, 12" font="KnobLabel" font-color="TextDim" title="Attack" text-alignment="left"/>
+            <view class="CSlider" origin="10, 76" size="95, 12" control-tag="23" default-value="0.1" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="115, 62" size="80, 12" font="KnobLabel" font-color="TextDim" title="Release" text-alignment="left"/>
+            <view class="CSlider" origin="115, 76" size="95, 12" control-tag="24" default-value="0.3" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 92" size="80, 12" font="KnobLabel" font-color="TextDim" title="Makeup" text-alignment="left"/>
+            <view class="CSlider" origin="10, 106" size="95, 12" control-tag="25" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="AccentGold" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="115, 92" size="80, 12" font="KnobLabel" font-color="TextDim" title="Knee" text-alignment="left"/>
+            <view class="CSlider" origin="115, 106" size="95, 12" control-tag="26" default-value="0.3" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+        </view>
+        
+        <!-- De-esser Module -->
+        <view class="CViewContainer" origin="440, 60" size="150, 140" background-color="ModuleBg" round-rect-radius="5">
+            <view class="COnOffButton" origin="10, 8" size="16, 16" control-tag="30"/>
+            <view class="CTextLabel" origin="30, 8" size="80, 16" font="ModuleTitle" font-color="TextLight" title="DE-ESSER" text-alignment="left"/>
+            
+            <view class="CTextLabel" origin="10, 35" size="80, 12" font="KnobLabel" font-color="TextDim" title="Frequency" text-alignment="left"/>
+            <view class="CSlider" origin="10, 49" size="130, 12" control-tag="31" default-value="0.6" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 68" size="80, 12" font="KnobLabel" font-color="TextDim" title="Threshold" text-alignment="left"/>
+            <view class="CSlider" origin="10, 82" size="130, 12" control-tag="32" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 101" size="80, 12" font="KnobLabel" font-color="TextDim" title="Range" text-alignment="left"/>
+            <view class="CSlider" origin="10, 115" size="130, 12" control-tag="33" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+        </view>
+        
+        <!-- EQ Module -->
+        <view class="CViewContainer" origin="600, 60" size="390, 140" background-color="ModuleBg" round-rect-radius="5">
+            <view class="COnOffButton" origin="10, 8" size="16, 16" control-tag="40"/>
+            <view class="CTextLabel" origin="30, 8" size="80, 16" font="ModuleTitle" font-color="TextLight" title="EQUALIZER" text-alignment="left"/>
+            
+            <!-- Band Labels -->
+            <view class="CTextLabel" origin="10, 28" size="85, 12" font="KnobLabel" font-color="AccentGold" title="LOW SHELF" text-alignment="center"/>
+            <view class="CTextLabel" origin="105, 28" size="85, 12" font="KnobLabel" font-color="SliderFill" title="LOW MID" text-alignment="center"/>
+            <view class="CTextLabel" origin="200, 28" size="85, 12" font="KnobLabel" font-color="SliderFill" title="HIGH MID" text-alignment="center"/>
+            <view class="CTextLabel" origin="295, 28" size="85, 12" font="KnobLabel" font-color="AccentGold" title="HIGH SHELF" text-alignment="center"/>
+            
+            <!-- Gain Sliders (Vertical) -->
+            <view class="CSlider" origin="40, 45" size="16, 80" control-tag="41" default-value="0.5" min-value="0" max-value="1" orientation="vertical" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="AccentGold" draw-frame="true"/>
+            <view class="CSlider" origin="135, 45" size="16, 80" control-tag="44" default-value="0.5" min-value="0" max-value="1" orientation="vertical" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            <view class="CSlider" origin="230, 45" size="16, 80" control-tag="47" default-value="0.5" min-value="0" max-value="1" orientation="vertical" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            <view class="CSlider" origin="325, 45" size="16, 80" control-tag="50" default-value="0.5" min-value="0" max-value="1" orientation="vertical" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="AccentGold" draw-frame="true"/>
+            
+            <!-- Freq labels -->
+            <view class="CTextLabel" origin="60, 55" size="35, 10" font="KnobLabel" font-color="TextDim" title="Freq" text-alignment="left"/>
+            <view class="CSlider" origin="60, 67" size="35, 10" control-tag="42" default-value="0.1" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="155, 55" size="35, 10" font="KnobLabel" font-color="TextDim" title="Freq" text-alignment="left"/>
+            <view class="CSlider" origin="155, 67" size="35, 10" control-tag="45" default-value="0.3" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="250, 55" size="35, 10" font="KnobLabel" font-color="TextDim" title="Freq" text-alignment="left"/>
+            <view class="CSlider" origin="250, 67" size="35, 10" control-tag="48" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="345, 55" size="35, 10" font="KnobLabel" font-color="TextDim" title="Freq" text-alignment="left"/>
+            <view class="CSlider" origin="345, 67" size="35, 10" control-tag="51" default-value="0.8" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+        </view>
+        
+        <!-- Row 2: Saturation, Pitch, Delay, Reverb -->
+        
+        <!-- Saturation Module -->
+        <view class="CViewContainer" origin="10, 210" size="150, 140" background-color="ModuleBg" round-rect-radius="5">
+            <view class="COnOffButton" origin="10, 8" size="16, 16" control-tag="60"/>
+            <view class="CTextLabel" origin="30, 8" size="100, 16" font="ModuleTitle" font-color="TextLight" title="SATURATION" text-alignment="left"/>
+            
+            <view class="CTextLabel" origin="10, 35" size="80, 12" font="KnobLabel" font-color="TextDim" title="Drive" text-alignment="left"/>
+            <view class="CSlider" origin="10, 49" size="130, 12" control-tag="61" default-value="0.3" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="AccentGold" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 68" size="80, 12" font="KnobLabel" font-color="TextDim" title="Mix" text-alignment="left"/>
+            <view class="CSlider" origin="10, 82" size="130, 12" control-tag="62" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 101" size="80, 12" font="KnobLabel" font-color="TextDim" title="Warmth" text-alignment="left"/>
+            <view class="CSlider" origin="10, 115" size="130, 12" control-tag="63" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+        </view>
+        
+        <!-- Pitch Module -->
+        <view class="CViewContainer" origin="170, 210" size="120, 140" background-color="ModuleBg" round-rect-radius="5">
+            <view class="COnOffButton" origin="10, 8" size="16, 16" control-tag="70"/>
+            <view class="CTextLabel" origin="30, 8" size="60, 16" font="ModuleTitle" font-color="TextLight" title="PITCH" text-alignment="left"/>
+            
+            <view class="CTextLabel" origin="10, 45" size="80, 12" font="KnobLabel" font-color="TextDim" title="Speed" text-alignment="left"/>
+            <view class="CSlider" origin="10, 59" size="100, 12" control-tag="71" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 85" size="80, 12" font="KnobLabel" font-color="TextDim" title="Amount" text-alignment="left"/>
+            <view class="CSlider" origin="10, 99" size="100, 12" control-tag="72" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+        </view>
+        
+        <!-- Delay Module -->
+        <view class="CViewContainer" origin="300, 210" size="200, 140" background-color="ModuleBg" round-rect-radius="5">
+            <view class="COnOffButton" origin="10, 8" size="16, 16" control-tag="80"/>
+            <view class="CTextLabel" origin="30, 8" size="60, 16" font="ModuleTitle" font-color="TextLight" title="DELAY" text-alignment="left"/>
+            
+            <view class="CTextLabel" origin="10, 32" size="80, 12" font="KnobLabel" font-color="TextDim" title="Time L" text-alignment="left"/>
+            <view class="CSlider" origin="10, 46" size="85, 12" control-tag="81" default-value="0.25" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="105, 32" size="80, 12" font="KnobLabel" font-color="TextDim" title="Time R" text-alignment="left"/>
+            <view class="CSlider" origin="105, 46" size="85, 12" control-tag="82" default-value="0.25" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 62" size="80, 12" font="KnobLabel" font-color="TextDim" title="Feedback" text-alignment="left"/>
+            <view class="CSlider" origin="10, 76" size="85, 12" control-tag="83" default-value="0.3" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="AccentGold" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="105, 62" size="80, 12" font="KnobLabel" font-color="TextDim" title="Mix" text-alignment="left"/>
+            <view class="CSlider" origin="105, 76" size="85, 12" control-tag="84" default-value="0.3" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 92" size="80, 12" font="KnobLabel" font-color="TextDim" title="HP Filter" text-alignment="left"/>
+            <view class="CSlider" origin="10, 106" size="85, 12" control-tag="86" default-value="0" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="105, 92" size="80, 12" font="KnobLabel" font-color="TextDim" title="LP Filter" text-alignment="left"/>
+            <view class="CSlider" origin="105, 106" size="85, 12" control-tag="87" default-value="1" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+        </view>
+        
+        <!-- Reverb Module -->
+        <view class="CViewContainer" origin="510, 210" size="220, 140" background-color="ModuleBg" round-rect-radius="5">
+            <view class="COnOffButton" origin="10, 8" size="16, 16" control-tag="90"/>
+            <view class="CTextLabel" origin="30, 8" size="70, 16" font="ModuleTitle" font-color="TextLight" title="REVERB" text-alignment="left"/>
+            
+            <view class="CTextLabel" origin="10, 32" size="80, 12" font="KnobLabel" font-color="TextDim" title="Size" text-alignment="left"/>
+            <view class="CSlider" origin="10, 46" size="95, 12" control-tag="91" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="115, 32" size="80, 12" font="KnobLabel" font-color="TextDim" title="Decay" text-alignment="left"/>
+            <view class="CSlider" origin="115, 46" size="95, 12" control-tag="92" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="AccentGold" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 62" size="80, 12" font="KnobLabel" font-color="TextDim" title="Pre-delay" text-alignment="left"/>
+            <view class="CSlider" origin="10, 76" size="95, 12" control-tag="93" default-value="0.1" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="115, 62" size="80, 12" font="KnobLabel" font-color="TextDim" title="Mix" text-alignment="left"/>
+            <view class="CSlider" origin="115, 76" size="95, 12" control-tag="94" default-value="0.3" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 92" size="80, 12" font="KnobLabel" font-color="TextDim" title="Damping" text-alignment="left"/>
+            <view class="CSlider" origin="10, 106" size="200, 12" control-tag="95" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+        </view>
+        
+        <!-- Stereo Width Module -->
+        <view class="CViewContainer" origin="740, 210" size="250, 140" background-color="ModuleBg" round-rect-radius="5">
+            <view class="COnOffButton" origin="10, 8" size="16, 16" control-tag="100"/>
+            <view class="CTextLabel" origin="30, 8" size="80, 16" font="ModuleTitle" font-color="TextLight" title="STEREO" text-alignment="left"/>
+            
+            <view class="CTextLabel" origin="10, 45" size="80, 12" font="KnobLabel" font-color="TextDim" title="Width" text-alignment="left"/>
+            <view class="CSlider" origin="10, 59" size="230, 14" control-tag="101" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 85" size="80, 12" font="KnobLabel" font-color="TextDim" title="Mono Bass Freq" text-alignment="left"/>
+            <view class="CSlider" origin="10, 99" size="230, 14" control-tag="102" default-value="0.1" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+        </view>
+        
+        <!-- Row 3: Auto Level, Breath Control, Info -->
+        
+        <!-- Auto Level Module -->
+        <view class="CViewContainer" origin="10, 360" size="150, 140" background-color="ModuleBg" round-rect-radius="5">
+            <view class="COnOffButton" origin="10, 8" size="16, 16" control-tag="110"/>
+            <view class="CTextLabel" origin="30, 8" size="100, 16" font="ModuleTitle" font-color="TextLight" title="AUTO LEVEL" text-alignment="left"/>
+            
+            <view class="CTextLabel" origin="10, 45" size="80, 12" font="KnobLabel" font-color="TextDim" title="Target Level" text-alignment="left"/>
+            <view class="CSlider" origin="10, 59" size="130, 14" control-tag="111" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="AccentGold" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 85" size="80, 12" font="KnobLabel" font-color="TextDim" title="Speed" text-alignment="left"/>
+            <view class="CSlider" origin="10, 99" size="130, 14" control-tag="112" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+        </view>
+        
+        <!-- Breath Control Module -->
+        <view class="CViewContainer" origin="170, 360" size="150, 140" background-color="ModuleBg" round-rect-radius="5">
+            <view class="COnOffButton" origin="10, 8" size="16, 16" control-tag="120"/>
+            <view class="CTextLabel" origin="30, 8" size="100, 16" font="ModuleTitle" font-color="TextLight" title="BREATH" text-alignment="left"/>
+            
+            <view class="CTextLabel" origin="10, 45" size="80, 12" font="KnobLabel" font-color="TextDim" title="Sensitivity" text-alignment="left"/>
+            <view class="CSlider" origin="10, 59" size="130, 14" control-tag="121" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+            
+            <view class="CTextLabel" origin="10, 85" size="80, 12" font="KnobLabel" font-color="TextDim" title="Reduction" text-alignment="left"/>
+            <view class="CSlider" origin="10, 99" size="130, 14" control-tag="122" default-value="0.5" min-value="0" max-value="1" orientation="horizontal" frame-color="SliderBg" back-color="SliderBg" draw-back="true" draw-back-color="SliderFill" draw-frame="true"/>
+        </view>
+        
+        <!-- Info Panel -->
+        <view class="CViewContainer" origin="330, 360" size="660, 140" background-color="ModuleBg" round-rect-radius="5">
+            <view class="CTextLabel" origin="20, 25" size="620, 30" text-alignment="center" font="HeaderFont" font-color="TextLight" title="AIV VOCAL SUITE"/>
+            <view class="CTextLabel" origin="20, 55" size="620, 20" text-alignment="center" font="ModuleTitle" font-color="TextDim" title="Professional Vocal Processing"/>
+            <view class="CTextLabel" origin="20, 85" size="620, 35" text-alignment="center" font="KnobLabel" font-color="TextDim" title="Gate • Compressor • De-esser • EQ • Saturation • Pitch • Delay • Reverb • Stereo • Auto Level • Breath Control"/>
+        </view>
+        
+    </template>
+    
+    <custom>
+        <attributes name="FocusDrawing"/>
+        <attributes Path="/Users/iairu/Desktop/VST/AIV/AIV/resource/editor.uidesc" name="VST3Editor"/>
+        <attributes Grids="1x 1,5x 5,10x 10,12x 12,15x 15" name="UIGridController"/>
+        <attributes SelectedTemplate="view" name="UITemplateController"/>
+        <attributes EditViewScale="1" EditorSize="0, 0, 1000, 520" SplitViewSize_0_0="0.75" SplitViewSize_0_1="0.21" SplitViewSize_1_0="0.48" SplitViewSize_1_1="0.51" SplitViewSize_2_0="0.64" SplitViewSize_2_1="0.35" TabSwitchValue="0" Version="1" name="UIEditController"/>
+        <attributes name="UIAttributesController"/>
+        <attributes SelectedRow="7" name="UIViewCreatorDataSource"/>
+    </custom>
+    
+    <bitmaps/>
+    
+</vstgui-ui-description>
